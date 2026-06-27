@@ -53,6 +53,10 @@ const ENV_LAN = process.env.LAN_HOST
 
 let chosenLanUrl = null; // IP choisie par l'opérateur dans la régie
 
+// Code d'accès des surfaces de CONTRÔLE (régie + animateur).
+// Défini par la variable d'environnement REGIE_CODE, sinon généré (4 chiffres).
+const ACCESS_CODE = (process.env.REGIE_CODE || String(Math.floor(1000 + Math.random() * 9000))).toString();
+
 /** URL réseau effective (choix opérateur > env > meilleure candidate). */
 function currentLanUrl() {
   if (chosenLanUrl) return chosenLanUrl;
@@ -473,15 +477,23 @@ const heartbeat = setInterval(() => {
 }, 30000);
 wss.on('close', () => clearInterval(heartbeat));
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   ws.isAlive = true;
   ws.on('pong', () => {
     ws.isAlive = true;
   });
+  // Authentification de contrôle : code passé en query (?code=...) à la connexion.
+  try {
+    const u = new URL(req.url, 'http://localhost');
+    ws._authed = u.searchParams.get('code') === ACCESS_CODE;
+  } catch {
+    ws._authed = false;
+  }
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();
   ws.send(JSON.stringify({ type: 'state', state }));
+  ws.send(JSON.stringify({ type: 'auth', ok: ws._authed }));
 
   ws.on('message', (raw) => {
     let msg;
@@ -491,7 +503,19 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // Authentification a posteriori (saisie du code dans la régie/animateur).
+    if (msg.type === 'auth') {
+      ws._authed = (msg.code || '').toString() === ACCESS_CODE;
+      ws.send(JSON.stringify({ type: 'auth', ok: ws._authed }));
+      return;
+    }
+
     if (msg.type === 'command') {
+      // Seules les surfaces de contrôle authentifiées peuvent commander.
+      if (!ws._authed) {
+        ws.send(JSON.stringify({ type: 'auth', ok: false }));
+        return;
+      }
       const handler = handlers[msg.action];
       if (handler) {
         try {
@@ -502,6 +526,7 @@ wss.on('connection', (ws) => {
         broadcastState();
       }
     } else if (msg.type === 'sound') {
+      if (!ws._authed) return; // les sons sont déclenchés par le contrôle
       // Événement sonore transitoire : on relaie à tous les écrans.
       // Anti-rebond : ignore un même son redéclenché < 150 ms après (double-clic,
       // ou régie + animateur qui agissent en parallèle).
@@ -546,6 +571,11 @@ server.listen(PORT, () => {
   console.log(`  Animateur    : http://localhost:${PORT}/animateur`);
   console.log(`  Règles       : http://localhost:${PORT}/regles`);
   console.log(`  Buzzer       : http://localhost:${PORT}/buzzer\n`);
+  console.log(`  🔒 Code d'accès régie/animateur : ${ACCESS_CODE}`);
+  if (!process.env.REGIE_CODE) {
+    console.log('     (aléatoire — fixez-le avec REGIE_CODE=moncode pour le garder)');
+  }
+  console.log('');
   console.log(`  Réseau (téléphones) : ${currentLanUrl()}/buzzer`);
   const cands = lanCandidates();
   if (cands.length > 1) {

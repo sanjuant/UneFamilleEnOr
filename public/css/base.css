@@ -107,3 +107,79 @@ button {
   border: none;
   color: inherit;
 }
+
+/* Portail de code d'accès (régie / animateur) */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 40%, var(--bg-1), var(--bg-0));
+  padding: 20px;
+}
+.auth-gate[hidden] {
+  display: none;
+}
+.auth-card {
+  width: min(380px, 92vw);
+  text-align: center;
+  background: linear-gradient(180deg, var(--panel), var(--bg-1));
+  border: 1px solid var(--gold-3);
+  border-radius: 18px;
+  padding: 30px 26px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.auth-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 7vw, 44px);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.auth-sub {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+#authInput {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 28px;
+  text-align: center;
+  letter-spacing: 6px;
+  background: var(--bg-0);
+  border: 1px solid var(--panel-edge);
+  color: var(--white);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+#authInput:focus-visible {
+  outline: 3px solid var(--gold-1);
+  outline-offset: 2px;
+}
+.auth-card .btn {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 20px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--gold-grad);
+  color: var(--bg-0);
+  border: 1px solid var(--gold-3);
+  font-weight: 800;
+  letter-spacing: 1px;
+  transition: filter 0.15s ease;
+}
+.auth-card .btn:hover {
+  filter: brightness(1.1);
+}
+.auth-err {
+  color: var(--red);
+  font-weight: 600;
+  margin-top: 14px;
+}
+.auth-err[hidden] {
+  display: none;
+}

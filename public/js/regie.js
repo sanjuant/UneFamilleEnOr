@@ -4,10 +4,12 @@
 
 let ws;
 let state = null;
+let authed = false;
+let ctrlCode = localStorage.getItem('ctrlCode') || '';
 const connEl = document.getElementById('conn');
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}`);
+  ws = new WebSocket(`ws://${location.host}/?code=${encodeURIComponent(ctrlCode)}`);
   ws.onopen = () => {
     connEl.textContent = '● en ligne';
     connEl.classList.add('ok');
@@ -19,7 +21,9 @@ function connect() {
   };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
-    if (msg.type === 'state') {
+    if (msg.type === 'auth') {
+      handleAuth(msg.ok);
+    } else if (msg.type === 'state') {
       state = msg.state;
       render();
     } else if (msg.type === 'sound') {
@@ -31,11 +35,37 @@ function connect() {
 connect();
 
 function cmd(action, payload = {}) {
+  if (!authed) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'command', action, payload }));
 }
 function sound(name, stop = false) {
+  if (!authed) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'sound', name, stop }));
 }
+
+// ---- Portail de code d'accès ----
+function handleAuth(ok) {
+  authed = ok;
+  const gate = document.getElementById('authGate');
+  if (gate) gate.hidden = ok;
+  if (!ok) {
+    const err = document.getElementById('authErr');
+    if (err) err.hidden = !ctrlCode; // affiche l'erreur seulement si un code avait été tenté
+    const inp = document.getElementById('authInput');
+    if (inp) inp.focus();
+  }
+}
+function submitCode() {
+  const inp = document.getElementById('authInput');
+  ctrlCode = (inp.value || '').trim();
+  localStorage.setItem('ctrlCode', ctrlCode);
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'auth', code: ctrlCode }));
+  else connect();
+}
+document.getElementById('authSubmit').addEventListener('click', submitCode);
+document.getElementById('authInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitCode();
+});
 
 // Débloque l'audio dès la première interaction de l'animateur.
 document.addEventListener('click', () => SoundManager.unlock(), { once: true });
@@ -148,6 +178,7 @@ shortcutsOverlay.addEventListener('click', (e) => {
 //  Raccourcis clavier (pilotage en direct)
 // ------------------------------------------------------------------ //
 document.addEventListener('keydown', (e) => {
+  if (!authed) return; // raccourcis inactifs tant que non authentifié
   if (e.repeat) return; // ignore l'auto-répétition d'une touche maintenue
   // Ignorer pendant la saisie dans un champ
   const el = document.activeElement;

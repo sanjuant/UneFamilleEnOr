@@ -6,6 +6,8 @@
 
 let ws;
 let state = null;
+let authed = false;
+let ctrlCode = localStorage.getItem('ctrlCode') || '';
 let roundsSig = '';
 let hideAnswers = localStorage.getItem('animHideAnswers') === '1';
 
@@ -13,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 const connDot = $('conn');
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}`);
+  ws = new WebSocket(`ws://${location.host}/?code=${encodeURIComponent(ctrlCode)}`);
   ws.onopen = () => connDot.classList.add('ok');
   ws.onclose = () => {
     connDot.classList.remove('ok');
@@ -21,7 +23,9 @@ function connect() {
   };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
-    if (msg.type === 'state') {
+    if (msg.type === 'auth') {
+      handleAuth(msg.ok);
+    } else if (msg.type === 'state') {
       state = msg.state;
       render();
     }
@@ -30,12 +34,37 @@ function connect() {
 connect();
 
 function cmd(action, payload = {}) {
+  if (!authed) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'command', action, payload }));
 }
 // Déclenche un son sur l'écran de jeu (cette page ne joue rien localement).
 function sound(name) {
+  if (!authed) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'sound', name }));
 }
+
+// ---- Portail de code d'accès ----
+function handleAuth(ok) {
+  authed = ok;
+  const gate = $('authGate');
+  if (gate) gate.hidden = ok;
+  if (!ok) {
+    const err = $('authErr');
+    if (err) err.hidden = !ctrlCode;
+    const inp = $('authInput');
+    if (inp) inp.focus();
+  }
+}
+function submitCode() {
+  ctrlCode = ($('authInput').value || '').trim();
+  localStorage.setItem('ctrlCode', ctrlCode);
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'auth', code: ctrlCode }));
+  else connect();
+}
+$('authSubmit').addEventListener('click', submitCode);
+$('authInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitCode();
+});
 
 // ---- Anti-spoiler ----
 $('spoilerBtn').addEventListener('click', () => {

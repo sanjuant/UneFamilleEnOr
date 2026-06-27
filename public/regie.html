@@ -10,6 +10,17 @@
 <body class="regie">
   <div class="studio-bg"></div>
 
+  <!-- Portail : code d'accès (régie) -->
+  <div class="auth-gate" id="authGate">
+    <div class="auth-card">
+      <div class="auth-title gold-text">ACCÈS RÉGIE</div>
+      <p class="auth-sub">Entrez le code d'accès affiché dans le terminal du serveur.</p>
+      <input type="text" id="authInput" inputmode="numeric" autocomplete="off" placeholder="Code" />
+      <button class="btn btn--gold" id="authSubmit">Valider</button>
+      <p class="auth-err" id="authErr" hidden>Code incorrect.</p>
+    </div>
+  </div>
+
   <!-- Barre supérieure -->
   <header class="topbar">
     <div class="topbar__title">

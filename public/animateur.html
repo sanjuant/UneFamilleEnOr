@@ -12,6 +12,17 @@
   <div class="studio-bg"></div>
   <div class="conn" id="conn" title="Connexion"></div>
 
+  <!-- Portail : code d'accès (animateur) -->
+  <div class="auth-gate" id="authGate">
+    <div class="auth-card">
+      <div class="auth-title gold-text">ACCÈS ANIMATEUR</div>
+      <p class="auth-sub">Entrez le code d'accès affiché dans le terminal du serveur.</p>
+      <input type="text" id="authInput" inputmode="numeric" autocomplete="off" placeholder="Code" />
+      <button class="btn btn--gold" id="authSubmit">Valider</button>
+      <p class="auth-err" id="authErr" hidden>Code incorrect.</p>
+    </div>
+  </div>
+
   <header class="anim-head">
     <div class="anim-title gold-text">ANIMATEUR</div>
     <div class="anim-scores" id="animScores"></div>

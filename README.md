@@ -17,6 +17,7 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main). **QR code** de connexion intégré.
 - ⚡ **Régie fluide** : lancement d'une manche en 1 clic (question + buzzers armés), **raccourcis clavier**, barre d'état permanente, équipe active déduite du buzz.
 - 📱 **Vue Animateur** : page `/animateur` (smartphone/tablette) pour l'animateur sur scène — voir la question de la prochaine manche, la lancer, révéler les réponses (ou les **garder masquées** pour ne pas se spoiler).
+- 🔒 **Code d'accès** : la régie et l'animateur sont protégés par un code (page **et** commandes WebSocket) ; l'écran de jeu et les buzzers restent ouverts.
 
 ### La manche finale, pas à pas
 
@@ -71,6 +72,20 @@ remplacez `localhost` par l'**adresse IP de ce PC**. Exemple : `http://192.168.1
 - **Barre d'état permanente** en haut : vue, manche, question, équipe qui a la main, cagnotte, fautes, état des buzzers.
 - **Raccourcis clavier** (bouton **« ⌨ Raccourcis »** ou touche `?`) :
   `1`-`9` révéler/masquer une réponse · `X` faute · `C` effacer les fautes · `R` tout révéler · `←`/`→` cagnotte à l'équipe gauche/droite · `B` armer les buzzers · `N` manche suivante · `L` logo.
+
+## Sécurité — code d'accès
+
+La **régie** (`/regie`) et l'**animateur** (`/animateur`) sont protégés par un **code d'accès partagé**. La protection couvre la page **et** les commandes WebSocket (impossible de piloter le jeu sans le code, même via une connexion directe). L'**écran de jeu** (`/`) et les **buzzers** (`/buzzer`) restent ouverts (les joueurs et le vidéoprojecteur en ont besoin).
+
+- Au démarrage, le serveur affiche le code dans le terminal :
+  `🔒 Code d'accès régie/animateur : 2181`
+- Par défaut il est **aléatoire** (régénéré à chaque lancement). Pour le fixer :
+  ```bash
+  REGIE_CODE=moncode npm start
+  ```
+- Sur l'appareil de régie/animation, on saisit le code une fois (il est mémorisé).
+
+> C'est une protection légère adaptée à une soirée en réseau local privé (anti-curieux / anti-blague), pas une sécurité de niveau Internet.
 
 ## Vue Animateur (scène)
 
