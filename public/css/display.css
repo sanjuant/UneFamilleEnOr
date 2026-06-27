@@ -24,6 +24,19 @@ body {
   gap: clamp(10px, 2vw, 30px);
 }
 
+/* La cagnotte et les fautes (X) n'appartiennent qu'aux manches : on les retire
+   hors plateau/question. La barre entière disparaît en finale et à la victoire
+   (vues autonomes), ce qui libère aussi la place verticale. */
+.stage[data-view='final'] .scorebar,
+.stage[data-view='winner'] .scorebar {
+  display: none;
+}
+.stage[data-view='logo'] .scorebar__center,
+.stage[data-view='final'] .scorebar__center,
+.stage[data-view='winner'] .scorebar__center {
+  display: none;
+}
+
 .team {
   position: relative;
   background: linear-gradient(180deg, var(--panel) 0%, var(--bg-1) 100%);
