@@ -24,16 +24,13 @@ body {
   gap: clamp(10px, 2vw, 30px);
 }
 
-/* La cagnotte et les fautes (X) n'appartiennent qu'aux manches : on les retire
-   hors plateau/question. La barre entière disparaît en finale et à la victoire
-   (vues autonomes), ce qui libère aussi la place verticale. */
+/* Le bandeau de scores n'a de sens que pendant une manche. On le masque sur
+   l'écran-titre (logo, avant/entre les parties), la finale et la victoire :
+   ces vues sont autonomes — ça évite les équipes « fantômes » à l'arrivée et
+   libère la place verticale. */
+.stage[data-view='logo'] .scorebar,
 .stage[data-view='final'] .scorebar,
 .stage[data-view='winner'] .scorebar {
-  display: none;
-}
-.stage[data-view='logo'] .scorebar__center,
-.stage[data-view='final'] .scorebar__center,
-.stage[data-view='winner'] .scorebar__center {
   display: none;
 }
 
