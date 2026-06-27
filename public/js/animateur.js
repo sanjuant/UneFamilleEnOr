@@ -9,7 +9,9 @@ let state = null;
 let authed = false;
 let ctrlCode = localStorage.getItem('ctrlCode') || '';
 let roundsSig = '';
-let hideAnswers = localStorage.getItem('animHideAnswers') === '1';
+// Par défaut, l'animateur a les réponses MASQUÉES (anti-spoiler) : à lui de cliquer
+// pour les afficher. On ne lève le masquage que s'il l'a explicitement choisi ('0').
+let hideAnswers = localStorage.getItem('animHideAnswers') !== '0';
 
 const $ = (id) => document.getElementById(id);
 const connDot = $('conn');
