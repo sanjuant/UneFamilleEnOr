@@ -145,10 +145,13 @@ button {
 }
 #authInput {
   width: 100%;
-  font-family: var(--font-display);
-  font-size: 28px;
+  /* Police de corps + interlettrage léger : lisible aussi bien pour un code à
+     chiffres que pour une phrase secrète (ex. « 2lion-1lapin-1massacre »). */
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 20px;
   text-align: center;
-  letter-spacing: 6px;
+  letter-spacing: 1px;
   background: var(--bg-0);
   border: 1px solid var(--panel-edge);
   color: var(--white);

@@ -83,6 +83,11 @@ La **régie** (`/regie`) et l'**animateur** (`/animateur`) sont protégés par u
   ```bash
   REGIE_CODE=moncode npm start
   ```
+- Le code accepte **n'importe quel texte** : un chiffre, un mot, ou une **phrase secrète** mémorisable (recommandé en ligne, plus sûr qu'un code court) :
+  ```bash
+  REGIE_CODE=2joueurs-1animateur-1jeu npm start
+  ```
+  La saisie est sensible à la casse. Idem pour `ANIMATEUR_CODE`.
 - Sur l'appareil de régie/animation, on saisit le code une fois (il est mémorisé).
 
 - **Anti-triche** : les réponses non révélées ne sont **pas** envoyées aux écrans non authentifiés (écran de jeu, buzzers, curieux) — impossible de lire les bonnes réponses à l'avance, même en inspectant la page.
