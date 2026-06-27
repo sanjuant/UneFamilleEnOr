@@ -71,7 +71,8 @@ body.anim {
 /* Bouton anti-spoiler */
 .spoiler-toggle {
   width: 100%;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: 18px;
   padding: 14px;
   border-radius: 14px;
@@ -107,12 +108,14 @@ body.anim {
   margin-bottom: 10px;
 }
 .panel__tag {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 16px;
   color: var(--gold-1);
 }
 .panel__q {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: clamp(18px, 5vw, 26px);
   line-height: 1.15;
   margin-bottom: 14px;
@@ -128,7 +131,8 @@ body.anim {
   gap: 8px;
 }
 .strikes-num {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 18px;
   color: var(--red);
   min-width: 3ch;
@@ -232,7 +236,7 @@ body.anim {
 .award-btn {
   flex: 1;
   min-width: 110px;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 15px;
   padding: 12px;
   border-radius: 10px;
@@ -273,7 +277,8 @@ body.anim {
   flex-wrap: wrap;
 }
 .launch-final {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 15px;
   padding: 10px 14px;
   border-radius: 10px;
@@ -344,7 +349,8 @@ body.anim {
   text-overflow: ellipsis;
 }
 .fcellr-ans {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: 16px;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -371,7 +377,8 @@ body.anim {
   color: var(--muted);
 }
 .fr-row b {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 20px;
   color: var(--gold-1);
 }
@@ -411,7 +418,8 @@ body.anim {
 
 /* Manches : lancement */
 .launch-next {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 15px;
   padding: 10px 14px;
   border-radius: 10px;
@@ -443,7 +451,8 @@ body.anim {
   margin-bottom: 4px;
 }
 .round-num {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 15px;
   color: var(--gold-1);
 }
