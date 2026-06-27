@@ -821,6 +821,13 @@ function updateFinalTimerDisplay(fs) {
   el.classList.toggle('running', t.running);
   el.classList.toggle('idle', idle);
   el.classList.toggle('low', t.running && val <= 5);
+
+  // « Reprendre » si le chrono est en pause avec du temps restant (même finaliste).
+  const startBtn = document.getElementById('ftStart');
+  if (startBtn) {
+    const paused = !t.running && t.remaining > 0 && t.player === fs.activePlayer;
+    startBtn.textContent = paused ? '▶ Reprendre' : '▶ Chrono';
+  }
 }
 
 // Décompte fluide du chrono côté régie (l'autorité reste le serveur via endsAt).

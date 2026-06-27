@@ -377,10 +377,14 @@ const handlers = {
   },
 
   // Minuteur de la finale (piloté par endsAt côté serveur).
+  // Reprend le temps restant si le chrono est en pause (même finaliste) ;
+  // sinon démarre un décompte neuf.
   startFinalTimer(p) {
     const fs = state.finalState;
     if (!fs) return;
-    const seconds = Number(p.seconds) || fs.timers[fs.activePlayer] || 20;
+    const t = fs.timer;
+    const canResume = !t.running && t.remaining > 0 && t.player === fs.activePlayer;
+    const seconds = Number(p.seconds) || (canResume ? t.remaining : fs.timers[fs.activePlayer] || 20);
     fs.timer = {
       running: true,
       endsAt: Date.now() + seconds * 1000,
