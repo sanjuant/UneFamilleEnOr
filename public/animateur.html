@@ -55,11 +55,19 @@
       </div>
     </section>
 
-    <!-- Manche finale (lecture) -->
+    <!-- Manche finale -->
     <section class="panel" id="finalPanel" hidden>
       <div class="final-top">
         <span class="panel__tag">⭐ Manche finale</span>
         <span class="anim-timer" id="animFinalTimer"></span>
+      </div>
+      <div class="final-ctrls">
+        <button class="mini-btn" data-fplayer="0" id="afP0">① Finaliste 1</button>
+        <button class="mini-btn" data-fplayer="1" id="afP1">② Finaliste 2</button>
+        <button class="mini-btn" id="afTimerStart">▶ Chrono</button>
+        <button class="mini-btn" id="afTimerPause">⏸</button>
+        <button class="mini-btn" id="afTimerReset">↺</button>
+        <button class="mini-btn afgold" id="afReveal">👁 Révélation</button>
       </div>
       <div class="final-read" id="finalRead"></div>
     </section>
@@ -68,7 +76,10 @@
     <section class="panel" id="roundsPanel">
       <div class="panel__head">
         <span class="panel__tag">📋 Manches</span>
-        <button class="launch-next" id="launchNextBtn">▶ Prochaine manche</button>
+        <div class="rounds-actions">
+          <button class="launch-next" id="launchNextBtn">▶ Prochaine manche</button>
+          <button class="launch-final" id="launchFinalBtn" hidden>⭐ Manche finale</button>
+        </div>
       </div>
       <div class="rounds" id="roundsList"></div>
     </section>

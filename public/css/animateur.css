@@ -244,6 +244,45 @@ body.anim {
   box-shadow: var(--glow-gold);
 }
 
+/* Manche finale : contrôles animateur */
+.final-ctrls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+.final-ctrls .mini-btn.active {
+  outline: 2px solid var(--gold-1);
+  outline-offset: 1px;
+  box-shadow: var(--glow-gold);
+}
+.mini-btn.afgold {
+  background: var(--gold-grad);
+  color: var(--bg-0);
+  border-color: var(--gold-3);
+  font-weight: 800;
+}
+
+/* Actions de la carte Manches */
+.rounds-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.launch-final {
+  font-family: var(--font-display);
+  font-size: 15px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #5a3a06, #3a2604);
+  color: var(--gold-1);
+  border: 1px solid var(--gold-3);
+}
+.launch-final.active {
+  outline: 2px solid var(--gold-1);
+  box-shadow: var(--glow-gold);
+}
+
 /* Manche finale (lecture) */
 .final-top {
   display: flex;

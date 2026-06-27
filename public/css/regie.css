@@ -198,8 +198,19 @@ body.regie {
 .score-box button {
   width: 38px;
   justify-content: center;
-  font-size: 18px;
-  padding: 6px 0;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 8px 0;
+  background: linear-gradient(180deg, #1b2f6b, #142457);
+  border: 1px solid var(--panel-edge);
+  color: var(--white);
+  border-radius: 8px;
+}
+.score-box button:hover {
+  filter: brightness(1.18);
+}
+.score-box button:active {
+  transform: translateY(1px) scale(0.98);
 }
 .score-box input[type='number'] {
   width: 70px;

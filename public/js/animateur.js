@@ -115,6 +115,21 @@ $('awardB').addEventListener('click', () => {
 });
 $('launchNextBtn').addEventListener('click', launchNext);
 
+// ---- Manche finale : lancement + pilotage ----
+$('launchFinalBtn').addEventListener('click', () => {
+  if (state && state.view === 'final' && !confirm('Redémarrer la manche finale ?\nLes réponses saisies seront effacées.')) return;
+  cmd('startFinal');
+});
+$('afP0').addEventListener('click', () => cmd('setFinalPlayer', { player: 0 }));
+$('afP1').addEventListener('click', () => cmd('setFinalPlayer', { player: 1 }));
+$('afTimerStart').addEventListener('click', () => cmd('startFinalTimer', {}));
+$('afTimerPause').addEventListener('click', () => cmd('pauseFinalTimer'));
+$('afTimerReset').addEventListener('click', () => cmd('resetFinalTimer'));
+$('afReveal').addEventListener('click', () => {
+  cmd('revealFinalAll');
+  sound('reveal');
+});
+
 function allRoundsPlayed() {
   const played = state.playedRounds || [];
   return state.rounds.length > 0 && state.rounds.every((_, i) => played.includes(i));
@@ -165,6 +180,13 @@ function render() {
   let phase = VIEW_LABELS[state.view] || state.view;
   if (state.board) phase += ` · Manche ${state.currentRoundIndex + 1}`;
   $('animPhase').textContent = phase;
+
+  // Bouton « Manche finale » : visible dès qu'une finale est définie.
+  const lf = $('launchFinalBtn');
+  if (lf) {
+    lf.hidden = !state.final;
+    lf.classList.toggle('active', state.view === 'final');
+  }
 
   renderBoard();
   renderFinal();
@@ -271,6 +293,13 @@ function renderFinal() {
     <div class="fr-row"><span>Total</span><b class="${reached ? 'ok' : ''}">${fs.total} / ${fs.target}</b></div>
     <p class="fr-note">Réponses saisies des finalistes. ⚠ = doublon (identique au finaliste 1).</p>
     ${rows}`;
+
+  // Contrôles : finaliste actif + libellé du chrono
+  $('afP0').classList.toggle('active', fs.activePlayer === 0);
+  $('afP1').classList.toggle('active', fs.activePlayer === 1);
+  const t = fs.timer;
+  const paused = t && !t.running && t.remaining > 0 && t.player === fs.activePlayer;
+  $('afTimerStart').textContent = paused ? '▶ Reprendre' : '▶ Chrono';
 
   updateAnimTimer();
 }
