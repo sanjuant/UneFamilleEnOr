@@ -658,6 +658,48 @@ body {
   letter-spacing: 2px;
 }
 
+/* ---------------- QR de connexion des buzzers ---------------- */
+.join-qr {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: none;
+  place-items: center;
+  background: radial-gradient(circle at 50% 50%, rgba(5, 11, 34, 0.9), rgba(5, 11, 34, 0.98));
+}
+.join-qr.show {
+  display: grid;
+}
+.join-qr__card {
+  text-align: center;
+  animation: pop-in 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.join-qr__title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 64px);
+  letter-spacing: 2px;
+  margin-bottom: 0.3em;
+}
+.join-qr__img {
+  width: min(46vh, 46vw);
+  height: min(46vh, 46vw);
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 0 50px rgba(245, 197, 24, 0.4);
+}
+.join-qr__url {
+  font-family: monospace;
+  font-size: clamp(16px, 2.4vw, 30px);
+  color: var(--gold-1);
+  margin-top: 0.5em;
+}
+.join-qr__hint {
+  font-size: clamp(14px, 2vw, 24px);
+  color: var(--muted);
+  margin-top: 0.2em;
+}
+
 /* Indicateur de connexion */
 .conn-dot {
   position: fixed;

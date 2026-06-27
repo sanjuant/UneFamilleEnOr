@@ -98,6 +98,16 @@
   <!-- Face-à-face : annonce des buzzers -->
   <div class="buzz-overlay" id="buzzOverlay"></div>
 
+  <!-- QR de connexion des buzzers (affiché à la demande de la régie) -->
+  <div class="join-qr" id="joinQr">
+    <div class="join-qr__card">
+      <div class="join-qr__title gold-text">REJOIGNEZ LE BUZZER</div>
+      <img class="join-qr__img" src="/qr/buzzer" alt="QR code buzzer" />
+      <div class="join-qr__url" id="joinQrUrl"></div>
+      <div class="join-qr__hint">Scannez avec votre téléphone</div>
+    </div>
+  </div>
+
   <div class="conn-dot" id="connDot" title="Connexion"></div>
 
   <script src="/js/sound.js"></script>

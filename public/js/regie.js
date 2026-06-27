@@ -127,6 +127,67 @@ document.getElementById('awardB').addEventListener('click', () => {
 // Buzzers (face-à-face)
 document.getElementById('armBuzzerBtn').addEventListener('click', () => cmd('armBuzzer'));
 document.getElementById('resetBuzzerBtn').addEventListener('click', () => cmd('resetBuzzer'));
+document.getElementById('qrScreenBtn').addEventListener('click', () => cmd('toggleJoinQR'));
+document.getElementById('lanSelect').addEventListener('change', (e) => cmd('setLanUrl', { url: e.target.value }));
+
+// Manche suivante (1 clic)
+document.getElementById('nextRoundBtn').addEventListener('click', nextRound);
+
+// Aide des raccourcis clavier
+const shortcutsOverlay = document.getElementById('shortcutsOverlay');
+const toggleShortcuts = (show) => {
+  shortcutsOverlay.hidden = show === undefined ? !shortcutsOverlay.hidden : !show;
+};
+document.getElementById('shortcutsBtn').addEventListener('click', () => toggleShortcuts());
+document.getElementById('shortcutsClose').addEventListener('click', () => toggleShortcuts(false));
+shortcutsOverlay.addEventListener('click', (e) => {
+  if (e.target === shortcutsOverlay) toggleShortcuts(false);
+});
+
+// ------------------------------------------------------------------ //
+//  Raccourcis clavier (pilotage en direct)
+// ------------------------------------------------------------------ //
+document.addEventListener('keydown', (e) => {
+  if (e.repeat) return; // ignore l'auto-répétition d'une touche maintenue
+  // Ignorer pendant la saisie dans un champ
+  const el = document.activeElement;
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const k = e.key;
+
+  if (k === '?' || k === 'h' || k === 'H') return toggleShortcuts(), e.preventDefault();
+  if (k === 'Escape') return toggleShortcuts(false);
+
+  // Révéler/masquer une réponse du plateau
+  if (/^[1-9]$/.test(k) && state && state.board) {
+    const i = Number(k) - 1;
+    const a = state.board.answers[i];
+    if (a) {
+      if (a.revealed) cmd('hideAnswer', { index: i });
+      else { cmd('revealAnswer', { index: i }); sound('reveal'); }
+    }
+    return e.preventDefault();
+  }
+
+  switch (k) {
+    case 'x': case 'X':
+      cmd('addStrike'); sound('wrong'); e.preventDefault(); break;
+    case 'c': case 'C':
+      cmd('clearStrikes'); e.preventDefault(); break;
+    case 'r': case 'R':
+      cmd('revealAll'); sound('reveal'); e.preventDefault(); break;
+    case 'ArrowLeft':
+      cmd('awardPot', { index: 0 }); sound('applause'); e.preventDefault(); break;
+    case 'ArrowRight':
+      cmd('awardPot', { index: 1 }); sound('applause'); e.preventDefault(); break;
+    case 'b': case 'B':
+      cmd('armBuzzer'); e.preventDefault(); break;
+    case 'n': case 'N':
+      nextRound(); e.preventDefault(); break;
+    case 'l': case 'L':
+      cmd('setView', { view: 'logo' }); e.preventDefault(); break;
+  }
+});
 
 // Manche finale
 document.getElementById('startFinalBtn').addEventListener('click', () => {
@@ -157,11 +218,33 @@ function render() {
     b.classList.toggle('active', b.dataset.view === state.view)
   );
 
+  renderStatusbar();
   renderTeams();
   renderRounds();
   renderBoard();
   renderFinal();
   renderBuzzer();
+}
+
+const VIEW_LABELS = { logo: 'Logo', question: 'Question', board: 'Plateau', final: 'Manche finale', winner: 'Gagnant' };
+
+function renderStatusbar() {
+  const b = state.board;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('sbView', VIEW_LABELS[state.view] || state.view);
+  set('sbRound', state.currentRoundIndex >= 0 ? `${state.currentRoundIndex + 1} (×${b ? b.multiplier : '?'})` : '—');
+  set('sbQuestion', b && b.question ? b.question : '—');
+
+  const active = b && b.activeTeamIndex != null ? b.activeTeamIndex : null;
+  set('sbActive', active != null && state.teams[active] ? state.teams[active].name : '—');
+  set('sbPot', b ? (b.multiplier > 1 ? `${b.pot} ×${b.multiplier} = ${b.pot * b.multiplier}` : `${b.pot} pts`) : '—');
+  set('sbStrikes', b ? `${b.strikes} / 3` : '—');
+
+  const bz = state.buzzer || {};
+  let bzTxt = 'repos';
+  if (bz.winner != null) bzTxt = `✋ ${state.teams[bz.winner] ? state.teams[bz.winner].name : 'Éq.' + (bz.winner + 1)}`;
+  else if (bz.armed) bzTxt = '🟢 armés';
+  set('sbBuzz', bzTxt);
 }
 
 function renderBuzzer() {
@@ -171,6 +254,36 @@ function renderBuzzer() {
     const n0 = bz.connected?.[0] || 0;
     const n1 = bz.connected?.[1] || 0;
     conn.textContent = `Connectés — ${state.teams[0].name} : ${n0} · ${state.teams[1].name} : ${n1}`;
+  }
+  // Adresse de connexion (réseau) affichée sous le QR
+  const lanUrl = state.lanUrl || location.origin;
+  const url = document.getElementById('buzzUrl');
+  if (url) url.textContent = `${lanUrl}/buzzer`;
+
+  // Liste des IP candidates (reconstruite seulement si elle change)
+  const sel = document.getElementById('lanSelect');
+  if (sel) {
+    const cands = state.lanCandidates || [];
+    const sig = cands.map((c) => c.url).join('|');
+    if (sel.dataset.sig !== sig) {
+      sel.dataset.sig = sig;
+      sel.innerHTML = cands
+        .map((c) => `<option value="${escapeAttr(c.url)}">${escapeHtml(c.url)} — ${escapeHtml(c.name)}</option>`)
+        .join('');
+    }
+    if (document.activeElement !== sel) sel.value = lanUrl;
+  }
+
+  // Rafraîchit l'image du QR seulement quand l'adresse change (cache-buster).
+  const qr = document.getElementById('buzzQr');
+  if (qr && qr.dataset.lan !== lanUrl) {
+    qr.dataset.lan = lanUrl;
+    qr.src = '/qr/buzzer?v=' + encodeURIComponent(lanUrl);
+  }
+  const qrScreenBtn = document.getElementById('qrScreenBtn');
+  if (qrScreenBtn) {
+    qrScreenBtn.classList.toggle('active', !!state.showJoinQR);
+    qrScreenBtn.textContent = state.showJoinQR ? '📺 Masquer le QR de l\'écran' : '📺 Afficher le QR sur l\'écran';
   }
   const armBtn = document.getElementById('armBuzzerBtn');
   if (armBtn) armBtn.classList.toggle('active', bz.armed);
@@ -260,13 +373,45 @@ function renderRounds() {
         )
         .join('');
       wrap.querySelectorAll('.round-item').forEach((b) =>
-        b.addEventListener('click', () => cmd('selectRound', { index: Number(b.dataset.i) }))
+        b.addEventListener('click', () => launchRound(Number(b.dataset.i)))
       );
     }
   }
-  wrap.querySelectorAll('.round-item').forEach((b) =>
-    b.classList.toggle('active', Number(b.dataset.i) === state.currentRoundIndex)
-  );
+  const played = state.playedRounds || [];
+  wrap.querySelectorAll('.round-item').forEach((b) => {
+    const i = Number(b.dataset.i);
+    b.classList.toggle('active', i === state.currentRoundIndex);
+    b.classList.toggle('played', played.includes(i));
+  });
+
+  // Désactive « Manche suivante » quand toutes les manches sont jouées.
+  const nb = document.getElementById('nextRoundBtn');
+  if (nb) {
+    const done = allRoundsPlayed();
+    nb.disabled = state.rounds.length === 0 || done;
+    nb.textContent = done ? '✓ Toutes les manches jouées' : '▶ Lancer la manche suivante';
+  }
+}
+
+// Lance une manche : question + buzzers armés (face-à-face). Petit jingle.
+function launchRound(index) {
+  cmd('launchRound', { index });
+  sound('reveal');
+}
+
+// Lance la prochaine manche non encore jouée. Ne fait rien si tout est joué.
+function nextRound() {
+  if (!state || !state.rounds.length) return;
+  const played = state.playedRounds || [];
+  let next = state.rounds.findIndex((_, i) => !played.includes(i) && i > state.currentRoundIndex);
+  if (next === -1) next = state.rounds.findIndex((_, i) => !played.includes(i));
+  if (next === -1) return; // toutes les manches sont jouées
+  launchRound(next);
+}
+
+function allRoundsPlayed() {
+  const played = state.playedRounds || [];
+  return state.rounds.length > 0 && state.rounds.every((_, i) => played.includes(i));
 }
 
 function renderBoard() {
@@ -283,6 +428,13 @@ function renderBoard() {
   document.getElementById('curQuestion').textContent = board.question;
   document.getElementById('strikeCount').textContent = `${board.strikes} / 3`;
   document.getElementById('potInfo').textContent = board.pot * board.multiplier;
+
+  // Met en avant l'équipe qui a la main (issue du face-à-face) sur les boutons de cagnotte.
+  const act = board.activeTeamIndex;
+  const aA = document.getElementById('awardA');
+  const aB = document.getElementById('awardB');
+  if (aA) aA.classList.toggle('active', act === 0);
+  if (aB) aB.classList.toggle('active', act === 1);
 
   const ctrl = document.getElementById('answersCtrl');
   const sig = board.question + '#' + board.answers.length;

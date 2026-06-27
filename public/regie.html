@@ -24,6 +24,7 @@
       <button class="btn" id="exampleBtn">🎲 Exemple</button>
       <a class="btn" href="/" target="_blank" rel="noopener">🖥️ Écran de jeu ↗</a>
       <a class="btn" href="/regles" target="_blank" rel="noopener">📖 Règles ↗</a>
+      <button class="btn" id="shortcutsBtn" title="Raccourcis clavier">⌨ Raccourcis</button>
       <button class="btn btn--toggle" id="muteBtn">🔊 Son</button>
       <button class="btn btn--danger" id="resetBtn">↺ Réinitialiser</button>
       <span class="conn" id="conn">● hors ligne</span>
@@ -31,6 +32,17 @@
   </header>
 
   <div id="loadInfo" class="load-info">Aucun jeu chargé — chargez un fichier JSON ou cliquez sur « Exemple ».</div>
+
+  <!-- Barre d'état permanente -->
+  <div class="statusbar" id="statusbar">
+    <span class="sb-item"><span class="sb-k">Vue</span><span class="sb-v" id="sbView">—</span></span>
+    <span class="sb-item"><span class="sb-k">Manche</span><span class="sb-v" id="sbRound">—</span></span>
+    <span class="sb-item sb-grow"><span class="sb-k">Question</span><span class="sb-v" id="sbQuestion">—</span></span>
+    <span class="sb-item"><span class="sb-k">Main</span><span class="sb-v" id="sbActive">—</span></span>
+    <span class="sb-item"><span class="sb-k">Cagnotte</span><span class="sb-v" id="sbPot">—</span></span>
+    <span class="sb-item"><span class="sb-k">Fautes</span><span class="sb-v" id="sbStrikes">—</span></span>
+    <span class="sb-item"><span class="sb-k">Buzzers</span><span class="sb-v" id="sbBuzz">—</span></span>
+  </div>
 
   <main class="grid">
     <!-- Affichage -->
@@ -65,9 +77,20 @@
     <!-- Buzzers (face-à-face) -->
     <section class="card">
       <h2 class="card__title">🔔 Buzzers (face-à-face)</h2>
-      <div class="row wrap">
-        <a class="btn" href="/buzzer" target="_blank" rel="noopener">📱 Ouvrir un buzzer ↗</a>
-        <span class="buzz-conn" id="buzzConn">Connectés : 0 / 0</span>
+      <div class="buzz-join">
+        <img class="buzz-qr" id="buzzQr" src="/qr/buzzer" alt="QR code buzzer" />
+        <div class="buzz-join__txt">
+          <p>Les joueurs scannent ce QR (ou ouvrent l'adresse) sur leur téléphone :</p>
+          <code class="buzz-url" id="buzzUrl">…/buzzer</code>
+          <label class="lan-pick">Adresse réseau :
+            <select id="lanSelect"></select>
+          </label>
+          <div class="row wrap">
+            <a class="btn" href="/buzzer" target="_blank" rel="noopener">📱 Ouvrir ici ↗</a>
+            <button class="btn" id="qrScreenBtn">📺 Afficher le QR sur l'écran</button>
+          </div>
+          <span class="buzz-conn" id="buzzConn">Connectés : 0 / 0</span>
+        </div>
       </div>
       <div class="row">
         <button class="btn btn--gold" id="armBuzzerBtn">🟢 Armer les buzzers</button>
@@ -84,7 +107,10 @@
 
     <!-- Manches -->
     <section class="card card--rounds">
-      <h2 class="card__title">📋 Manches</h2>
+      <h2 class="card__title">📋 Manches
+        <button class="btn btn--gold card__action" id="nextRoundBtn" title="Lancer la prochaine manche (n)">▶ Lancer la manche suivante</button>
+      </h2>
+      <p class="rounds-hint">Cliquez une manche pour la <b>lancer</b> : question affichée + buzzers armés pour le face-à-face.</p>
       <div id="roundsList" class="rounds-list"></div>
     </section>
 
@@ -120,6 +146,27 @@
       <div id="finalCtrl" class="final-ctrl"></div>
     </section>
   </main>
+
+  <!-- Aide-mémoire des raccourcis clavier -->
+  <div class="shortcuts-overlay" id="shortcutsOverlay" hidden>
+    <div class="shortcuts-card">
+      <h2 class="gold-text">Raccourcis clavier</h2>
+      <p class="sc-note">Inactifs pendant la saisie dans un champ.</p>
+      <ul class="sc-list">
+        <li><kbd>1</kbd>…<kbd>9</kbd> <span>Révéler / masquer la réponse n°</span></li>
+        <li><kbd>X</kbd> <span>Ajouter une faute (le X)</span></li>
+        <li><kbd>C</kbd> <span>Effacer les fautes</span></li>
+        <li><kbd>R</kbd> <span>Tout révéler le plateau</span></li>
+        <li><kbd>←</kbd> / <kbd>→</kbd> <span>Donner la cagnotte à l'équipe gauche / droite</span></li>
+        <li><kbd>B</kbd> <span>Armer les buzzers</span></li>
+        <li><kbd>N</kbd> <span>Lancer la manche suivante</span></li>
+        <li><kbd>L</kbd> <span>Afficher le logo</span></li>
+        <li><kbd>?</kbd> <span>Afficher / masquer cette aide</span></li>
+        <li><kbd>Échap</kbd> <span>Fermer</span></li>
+      </ul>
+      <button class="btn btn--gold" id="shortcutsClose">Fermer</button>
+    </div>
+  </div>
 
   <script src="/js/sound.js"></script>
   <script src="/js/regie.js"></script>

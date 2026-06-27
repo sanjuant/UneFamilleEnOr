@@ -74,6 +74,7 @@ function render(s) {
   renderFinal(s.finalState, s);
   renderWinner(s);
   renderBuzzer(s);
+  renderJoinQR(s);
 
   prev = s;
 }
@@ -264,6 +265,21 @@ function renderWinner(s) {
   if (!prev || prev.view !== 'winner') {
     SoundManager.play('win');
     confetti();
+  }
+}
+
+function renderJoinQR(s) {
+  const ov = document.getElementById('joinQr');
+  if (!ov) return;
+  ov.classList.toggle('show', !!s.showJoinQR);
+  const lanUrl = s.lanUrl || location.origin;
+  const url = document.getElementById('joinQrUrl');
+  if (url) url.textContent = `${lanUrl}/buzzer`;
+  // Rafraîchit l'image du QR seulement quand l'adresse change (cache-buster).
+  const img = document.querySelector('.join-qr__img');
+  if (img && img.dataset.lan !== lanUrl) {
+    img.dataset.lan = lanUrl;
+    img.src = '/qr/buzzer?v=' + encodeURIComponent(lanUrl);
   }
 }
 

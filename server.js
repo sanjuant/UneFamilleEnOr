@@ -10,12 +10,62 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const os = require('os');
+const QRCode = require('qrcode');
 const { WebSocketServer } = require('ws');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 3000;
+
+// Adaptateurs virtuels / VPN à déprioriser pour le choix de l'IP locale.
+const VIRTUAL_RE = /(vmware|virtualbox|vbox|hyper-?v|vethernet|wsl|docker|loopback|vpn|tunnel|tap\b|tailscale|zerotier|bluetooth|radmin)/i;
+
+/** Liste les IPv4 locales joignables, les plus probables d'abord (vraie carte LAN). */
+function lanCandidates() {
+  const list = [];
+  const ifaces = os.networkInterfaces();
+  for (const name of Object.keys(ifaces)) {
+    for (const ni of ifaces[name] || []) {
+      if (ni.family === 'IPv4' && !ni.internal) list.push({ name, address: ni.address });
+    }
+  }
+  const score = (c) => {
+    let s = 0;
+    if (VIRTUAL_RE.test(c.name)) s += 100;
+    if (/^192\.168\.56\./.test(c.address)) s += 50; // VirtualBox host-only
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(c.address)) s += 20; // souvent Docker/Hyper-V/WSL
+    if (/(wi-?fi|wlan|ethernet|^en\d|^eth)/i.test(c.name)) s -= 10; // vraie carte
+    return s;
+  };
+  return list
+    .sort((a, b) => score(a) - score(b))
+    .map((c) => ({ name: c.name, url: `http://${c.address}:${PORT}` }));
+}
+
+// Surcharge manuelle via variable d'environnement (ex. LAN_HOST=192.168.1.20).
+const ENV_LAN = process.env.LAN_HOST
+  ? process.env.LAN_HOST.startsWith('http')
+    ? process.env.LAN_HOST
+    : `http://${process.env.LAN_HOST}:${PORT}`
+  : null;
+
+let chosenLanUrl = null; // IP choisie par l'opérateur dans la régie
+
+/** URL réseau effective (choix opérateur > env > meilleure candidate). */
+function currentLanUrl() {
+  if (chosenLanUrl) return chosenLanUrl;
+  if (ENV_LAN) return ENV_LAN;
+  const c = lanCandidates();
+  return c.length ? c[0].url : `http://localhost:${PORT}`;
+}
+
+/** Rafraîchit l'adresse réseau et les candidates dans l'état diffusé. */
+function refreshLan() {
+  state.lanUrl = currentLanUrl();
+  state.lanCandidates = lanCandidates();
+}
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
@@ -24,6 +74,21 @@ app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'display
 app.get('/regie', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'regie.html')));
 app.get('/regles', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'regles.html')));
 app.get('/buzzer', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'buzzer.html')));
+
+// QR code (SVG) pointant vers la page buzzer sur le réseau local.
+app.get('/qr/buzzer', async (_req, res) => {
+  try {
+    const svg = await QRCode.toString(`${currentLanUrl()}/buzzer`, {
+      type: 'svg',
+      margin: 1,
+      color: { dark: '#0a1740', light: '#ffffff' },
+    });
+    res.set('Cache-Control', 'no-store');
+    res.type('svg').send(svg);
+  } catch {
+    res.status(500).send('QR error');
+  }
+});
 
 // ---------------------------------------------------------------------------
 // État du jeu
@@ -44,8 +109,12 @@ function freshState() {
     board: null,         // plateau de la manche en cours
     finalState: null,    // état vivant de la manche finale
     winnerTeam: null,    // index de l'équipe gagnante (vue winner)
+    playedRounds: [],    // index des manches déjà attribuées (progression)
     // Buzzers du face-à-face : armé ? qui a la main ? combien de buzzers connectés par équipe ?
     buzzer: { armed: false, winner: null, connected: [0, 0] },
+    showJoinQR: false,   // afficher le QR code de connexion sur l'écran de jeu ?
+    lanUrl: '',          // adresse réseau effective (rempli par refreshLan)
+    lanCandidates: [],   // IP locales possibles (pour le choix en régie)
   };
 }
 
@@ -89,6 +158,8 @@ function buildBoard(roundIndex) {
     pot: 0,
     strikes: 0,
     activeTeamIndex: null,
+    awarded: null,       // équipe ayant reçu la cagnotte (anti double-crédit)
+    awardedValue: 0,     // montant crédité (pour pouvoir corriger l'attribution)
   };
 }
 
@@ -182,6 +253,18 @@ const handlers = {
     }
   },
 
+  // Lance une manche d'un seul geste : question affichée + buzzers armés (face-à-face).
+  launchRound(p) {
+    const i = Number(p.index);
+    if (i >= 0 && i < state.rounds.length) {
+      state.currentRoundIndex = i;
+      state.board = buildBoard(i);
+      state.view = 'question';
+      state.buzzer.armed = true;
+      state.buzzer.winner = null;
+    }
+  },
+
   // ---- Plateau (manche) ----
   revealAnswer(p) {
     if (state.board && state.board.answers[p.index]) {
@@ -219,8 +302,23 @@ const handlers = {
   awardPot(p) {
     if (!state.board) return;
     recomputePot();
-    const team = state.teams[p.index];
-    if (team) team.score += state.board.pot * state.board.multiplier;
+    const idx = Number(p.index);
+    const value = state.board.pot * state.board.multiplier;
+    // Idempotent : déjà attribué à cette équipe → on ne recrédite pas.
+    if (state.board.awarded === idx) return;
+    // Correction : annule l'attribution précédente avant de re-créditer l'autre équipe.
+    if (state.board.awarded != null && state.teams[state.board.awarded]) {
+      const prev = state.teams[state.board.awarded];
+      prev.score = Math.max(0, prev.score - (state.board.awardedValue || 0));
+    }
+    const team = state.teams[idx];
+    if (team) team.score += value;
+    state.board.awarded = idx;
+    state.board.awardedValue = value;
+    // Marque la manche en cours comme jouée (progression / « Manche suivante »).
+    if (state.currentRoundIndex >= 0 && !state.playedRounds.includes(state.currentRoundIndex)) {
+      state.playedRounds.push(state.currentRoundIndex);
+    }
   },
 
   // ---- Manche finale ----
@@ -313,6 +411,20 @@ const handlers = {
   resetBuzzer() {
     state.buzzer.armed = false;
     state.buzzer.winner = null;
+    // Plus personne n'a la main tant qu'un nouveau buzz n'a pas eu lieu.
+    if (state.board) state.board.activeTeamIndex = null;
+  },
+
+  // Afficher / masquer le QR code de connexion des buzzers sur l'écran de jeu.
+  toggleJoinQR(p) {
+    state.showJoinQR = p && p.show !== undefined ? !!p.show : !state.showJoinQR;
+  },
+
+  // Choix manuel de l'adresse réseau (IP) utilisée pour le QR des buzzers.
+  setLanUrl(p) {
+    const url = (p && p.url ? p.url : '').toString();
+    chosenLanUrl = /^https?:\/\//.test(url) ? url : null;
+    refreshLan();
   },
 
   // ---- Gagnant ----
@@ -336,6 +448,7 @@ function broadcast(obj) {
 function broadcastState() {
   recomputePot();
   recomputeBuzzerConnected();
+  refreshLan();
   broadcast({ type: 'state', state });
 }
 
@@ -360,6 +473,7 @@ wss.on('connection', (ws) => {
   });
   recomputePot();
   recomputeBuzzerConnected();
+  refreshLan();
   ws.send(JSON.stringify({ type: 'state', state }));
 
   ws.on('message', (raw) => {
@@ -394,6 +508,8 @@ wss.on('connection', (ws) => {
       if ((team === 0 || team === 1) && state.buzzer.armed && state.buzzer.winner === null) {
         state.buzzer.winner = team;
         state.buzzer.armed = false;
+        // L'équipe qui a buzzé prend la main sur le plateau en cours.
+        if (state.board) state.board.activeTeamIndex = team;
         broadcast({ type: 'sound', name: 'buzzer' });
         broadcastState();
       }
@@ -409,11 +525,18 @@ wss.on('connection', (ws) => {
 });
 
 server.listen(PORT, () => {
+  refreshLan();
   console.log('\n  🟡  UNE FAMILLE EN OR  🟡\n');
   console.log(`  Écran de jeu : http://localhost:${PORT}/`);
   console.log(`  Régie        : http://localhost:${PORT}/regie`);
   console.log(`  Règles       : http://localhost:${PORT}/regles`);
   console.log(`  Buzzer       : http://localhost:${PORT}/buzzer\n`);
-  console.log('  Sur le réseau, remplacez "localhost" par l\'adresse IP de ce PC.');
-  console.log('  (Ctrl+C pour arrêter)\n');
+  console.log(`  Réseau (téléphones) : ${currentLanUrl()}/buzzer`);
+  const cands = lanCandidates();
+  if (cands.length > 1) {
+    console.log('  Autres adresses possibles (choisissables dans la régie) :');
+    cands.forEach((c) => console.log(`    - ${c.url}  (${c.name})`));
+    console.log('  Forcer une IP : démarrer avec LAN_HOST=192.168.x.x');
+  }
+  console.log('\n  (Ctrl+C pour arrêter)\n');
 });

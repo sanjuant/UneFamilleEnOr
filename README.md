@@ -14,7 +14,8 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 🎵 **Sons** : joue tes propres MP3 (dossier `sounds/`), avec repli automatique sur des sons de synthèse.
 - 🎉 Écran de victoire avec confettis.
 - 📖 **Règles intégrées** : page `/regles` (avec déroulé détaillé de la manche finale) accessible depuis la régie.
-- 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main).
+- 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main). **QR code** de connexion intégré.
+- ⚡ **Régie fluide** : lancement d'une manche en 1 clic (question + buzzers armés), **raccourcis clavier**, barre d'état permanente, équipe active déduite du buzz.
 
 ### La manche finale, pas à pas
 
@@ -56,9 +57,18 @@ remplacez `localhost` par l'**adresse IP de ce PC**. Exemple : `http://192.168.1
 
 ## Les buzzers (face-à-face)
 
-1. Sur chaque smartphone (connecté au même réseau), ouvrez **`http://<IP-du-PC>:3000/buzzer`** et choisissez l'équipe.
-2. Dans la régie, carte **« 🔔 Buzzers »** : vérifiez que les 2 buzzers sont connectés.
-3. Au face-à-face, cliquez **« Armer les buzzers »** : le premier téléphone qui appuie prend la main (annoncé sur l'écran de jeu + buzz). Cliquez **« Réinitialiser »** pour le face-à-face suivant.
+1. Dans la régie, carte **« 🔔 Buzzers »** : faites scanner le **QR code** aux joueurs (ou bouton **« 📺 Afficher le QR sur l'écran »**). Sinon, ouvrez `http://<IP-du-PC>:3000/buzzer` sur chaque téléphone. Chaque joueur choisit son équipe.
+2. Vérifiez le nombre de buzzers connectés par équipe.
+3. Au face-à-face, **« Armer les buzzers »** (ou touche `B`) : le premier téléphone qui appuie prend la main (annoncé sur l'écran de jeu + buzz) et devient l'**équipe active** du plateau.
+
+> Lancer une manche (clic sur la manche, ou « Manche suivante » / touche `N`) **arme automatiquement** les buzzers.
+
+## Confort de régie
+
+- **Lancer une manche en 1 clic** : clic sur une manche = question affichée + buzzers armés. Bouton **« ▶ Lancer la manche suivante »** (touche `N`). Les manches jouées sont cochées ✓.
+- **Barre d'état permanente** en haut : vue, manche, question, équipe qui a la main, cagnotte, fautes, état des buzzers.
+- **Raccourcis clavier** (bouton **« ⌨ Raccourcis »** ou touche `?`) :
+  `1`-`9` révéler/masquer une réponse · `X` faute · `C` effacer les fautes · `R` tout révéler · `←`/`→` cagnotte à l'équipe gauche/droite · `B` armer les buzzers · `N` manche suivante · `L` logo.
 
 ## Format du fichier de questions
 
