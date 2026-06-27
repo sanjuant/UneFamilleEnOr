@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Régie — Une Famille en Or</title>
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/regie.css" />
+</head>
+<body class="regie">
+  <div class="studio-bg"></div>
+
+  <!-- Barre supérieure -->
+  <header class="topbar">
+    <div class="topbar__title">
+      <span class="gold-text">RÉGIE</span>
+      <small>Une Famille en Or</small>
+    </div>
+    <div class="topbar__actions">
+      <label class="btn btn--file">
+        📂 Charger un JSON
+        <input type="file" id="fileInput" accept="application/json,.json" hidden />
+      </label>
+      <button class="btn" id="exampleBtn">🎲 Exemple</button>
+      <a class="btn" href="/" target="_blank" rel="noopener">🖥️ Écran de jeu ↗</a>
+      <a class="btn" href="/regles" target="_blank" rel="noopener">📖 Règles ↗</a>
+      <button class="btn btn--toggle" id="muteBtn">🔊 Son</button>
+      <button class="btn btn--danger" id="resetBtn">↺ Réinitialiser</button>
+      <span class="conn" id="conn">● hors ligne</span>
+    </div>
+  </header>
+
+  <div id="loadInfo" class="load-info">Aucun jeu chargé — chargez un fichier JSON ou cliquez sur « Exemple ».</div>
+
+  <main class="grid">
+    <!-- Affichage -->
+    <section class="card">
+      <h2 class="card__title">🎬 Affichage</h2>
+      <div class="row">
+        <button class="btn pill" data-view="logo">Logo</button>
+        <button class="btn pill" data-view="question">Question seule</button>
+        <button class="btn pill" data-view="board">Plateau</button>
+      </div>
+      <div class="row">
+        <button class="btn pill btn--gold" id="winA">🏆 Victoire Équipe 1</button>
+        <button class="btn pill btn--gold" id="winB">🏆 Victoire Équipe 2</button>
+      </div>
+    </section>
+
+    <!-- Sons -->
+    <section class="card">
+      <h2 class="card__title">🎵 Sons</h2>
+      <div class="row wrap">
+        <button class="btn snd" data-sound="intro">🎶 Générique</button>
+        <button class="btn snd" data-sound="reveal">🔔 Bonne réponse</button>
+        <button class="btn snd btn--x" data-sound="wrong">❌ Faux (le X)</button>
+        <button class="btn snd" data-sound="buzzer">⚡ Buzzer</button>
+        <button class="btn snd" data-sound="applause">👏 Applaudissements</button>
+        <button class="btn snd" data-sound="final">⏱️ Musique finale</button>
+        <button class="btn snd" data-sound="final" data-stop="1">⏹️ Stop finale</button>
+        <button class="btn snd btn--gold" data-sound="win">🎉 Victoire</button>
+      </div>
+    </section>
+
+    <!-- Buzzers (face-à-face) -->
+    <section class="card">
+      <h2 class="card__title">🔔 Buzzers (face-à-face)</h2>
+      <div class="row wrap">
+        <a class="btn" href="/buzzer" target="_blank" rel="noopener">📱 Ouvrir un buzzer ↗</a>
+        <span class="buzz-conn" id="buzzConn">Connectés : 0 / 0</span>
+      </div>
+      <div class="row">
+        <button class="btn btn--gold" id="armBuzzerBtn">🟢 Armer les buzzers</button>
+        <button class="btn" id="resetBuzzerBtn">↺ Réinitialiser</button>
+      </div>
+      <div class="buzz-state" id="buzzState">Buzzers au repos.</div>
+    </section>
+
+    <!-- Équipes -->
+    <section class="card">
+      <h2 class="card__title">👥 Équipes & Scores</h2>
+      <div id="teams"></div>
+    </section>
+
+    <!-- Manches -->
+    <section class="card card--rounds">
+      <h2 class="card__title">📋 Manches</h2>
+      <div id="roundsList" class="rounds-list"></div>
+    </section>
+
+    <!-- Plateau en cours -->
+    <section class="card card--board" id="boardCard" hidden>
+      <h2 class="card__title">🎯 Plateau en cours — <span id="boardCardSub"></span></h2>
+      <p class="board-q" id="curQuestion"></p>
+      <div id="answersCtrl" class="answers-ctrl"></div>
+      <div class="board-tools">
+        <div class="strikes-ctrl">
+          <span>Fautes :</span>
+          <button class="btn btn--x" id="strikeAdd">+ X</button>
+          <span class="strikes-count" id="strikeCount">0 / 3</span>
+          <button class="btn" id="strikeClear">Effacer</button>
+        </div>
+        <div class="award-ctrl">
+          <span>Donner la cagnotte (<b id="potInfo">0</b>) à :</span>
+          <button class="btn btn--gold" id="awardA">Équipe 1</button>
+          <button class="btn btn--gold" id="awardB">Équipe 2</button>
+        </div>
+        <button class="btn" id="revealAllBtn">👁️ Tout révéler</button>
+      </div>
+    </section>
+
+    <!-- Manche finale -->
+    <section class="card card--final" id="finalCard" hidden>
+      <h2 class="card__title">⭐ Manche finale
+        <a class="rules-link" href="/regles#la-manche-finale" target="_blank" rel="noopener">voir les règles ↗</a>
+      </h2>
+      <div class="row">
+        <button class="btn btn--gold" id="startFinalBtn">▶ Démarrer la manche finale</button>
+      </div>
+      <div id="finalCtrl" class="final-ctrl"></div>
+    </section>
+  </main>
+
+  <script src="/js/sound.js"></script>
+  <script src="/js/regie.js"></script>
+</body>
+</html>

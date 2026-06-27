@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#050b22" />
+  <title>Buzzer — Une Famille en Or</title>
+  <link rel="stylesheet" href="/css/base.css" />
+  <style>
+    html, body { height: 100%; overscroll-behavior: none; }
+    body { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    .wrap { height: 100dvh; display: flex; flex-direction: column; }
+
+    /* Choix de l'équipe */
+    .pick { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center; }
+    .pick h1 { font-family: var(--font-display); font-size: clamp(28px, 9vw, 56px); }
+    .pick p { color: var(--muted); }
+    .pick-btns { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 420px; }
+    .pick-btn { font-family: var(--font-display); font-size: clamp(24px, 7vw, 40px); padding: 0.7em; border-radius: 18px; color: var(--bg-0); background: var(--gold-grad); box-shadow: var(--glow-gold); }
+
+    /* Écran buzzer */
+    .buzz { flex: 1; display: none; flex-direction: column; }
+    .buzz.show { display: flex; }
+    .buzz-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; }
+    .buzz-team { font-family: var(--font-display); font-size: clamp(20px, 6vw, 32px); color: var(--gold-1); }
+    .buzz-change { color: var(--muted); font-size: 14px; background: none; border: 1px solid var(--panel-edge); padding: 6px 12px; border-radius: 999px; }
+
+    .pad { flex: 1; margin: 0 16px 22px; border-radius: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; border: 4px solid var(--panel-edge); background: radial-gradient(circle at 50% 35%, var(--bg-2), var(--bg-0)); transition: transform 0.06s ease, filter 0.2s ease; }
+    .pad .pad-emoji { font-size: clamp(60px, 22vw, 160px); }
+    .pad .pad-text { font-family: var(--font-display); font-size: clamp(26px, 9vw, 64px); letter-spacing: 1px; padding: 0 12px; }
+    .pad .pad-sub { color: var(--muted); font-size: clamp(14px, 4vw, 20px); }
+
+    /* États */
+    .pad.idle { opacity: 0.65; }
+    .pad.armed { border-color: var(--gold-2); background: radial-gradient(circle at 50% 35%, #3a2e06, #1a1403); box-shadow: var(--glow-gold), inset 0 0 60px rgba(245,197,24,0.15); animation: ready 1s ease-in-out infinite; cursor: pointer; }
+    .pad.armed .pad-text { color: var(--gold-1); }
+    .pad.armed:active { transform: scale(0.97); filter: brightness(1.2); }
+    @keyframes ready { 50% { box-shadow: 0 0 60px rgba(245,197,24,0.8), inset 0 0 60px rgba(245,197,24,0.25); } }
+    .pad.won { border-color: var(--green); background: radial-gradient(circle at 50% 35%, #0f3a22, #061a0f); box-shadow: 0 0 50px rgba(56,214,107,0.6); }
+    .pad.won .pad-text { color: var(--green); }
+    .pad.lost { border-color: var(--red); background: radial-gradient(circle at 50% 35%, #3a0f0f, #1a0606); }
+    .pad.lost .pad-text { color: var(--red); }
+
+    .conn { position: fixed; top: 8px; right: 10px; width: 11px; height: 11px; border-radius: 50%; background: var(--red); box-shadow: 0 0 8px currentColor; }
+    .conn.ok { background: var(--green); }
+  </style>
+</head>
+<body>
+  <div class="studio-bg"></div>
+  <div class="conn" id="conn"></div>
+
+  <div class="wrap">
+    <!-- Choix de l'équipe -->
+    <section class="pick" id="pick">
+      <h1 class="gold-text">BUZZER</h1>
+      <p>Choisissez votre équipe :</p>
+      <div class="pick-btns">
+        <button class="pick-btn" data-team="0" id="pick0">Équipe 1</button>
+        <button class="pick-btn" data-team="1" id="pick1">Équipe 2</button>
+      </div>
+    </section>
+
+    <!-- Buzzer -->
+    <section class="buzz" id="buzz">
+      <div class="buzz-head">
+        <span class="buzz-team" id="myTeam">—</span>
+        <button class="buzz-change" id="changeTeam">Changer d'équipe</button>
+      </div>
+      <div class="pad idle" id="pad">
+        <div class="pad-emoji" id="padEmoji">⏳</div>
+        <div class="pad-text" id="padText">En attente…</div>
+        <div class="pad-sub" id="padSub">L'animateur va armer les buzzers.</div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/js/buzzer.js"></script>
+</body>
+</html>

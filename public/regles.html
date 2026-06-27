@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Règles — Une Famille en Or</title>
+  <link rel="stylesheet" href="/css/base.css" />
+  <style>
+    body { overflow-y: auto; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+    .back { color: var(--gold-1); text-decoration: none; font-weight: 600; font-size: 14px; border: 1px solid var(--panel-edge); padding: 8px 14px; border-radius: 999px; }
+    .back:hover { background: rgba(245,197,24,.1); }
+    h1 { font-family: var(--font-display); font-size: clamp(40px, 8vw, 84px); line-height: .95; letter-spacing: 1px; filter: drop-shadow(0 0 30px rgba(245,197,24,.4)); }
+    .sub { text-transform: uppercase; letter-spacing: 6px; color: var(--gold-2); font-size: 13px; margin-bottom: 18px; }
+    .intro { color: var(--muted); font-size: 17px; line-height: 1.6; border-left: 3px solid var(--gold-2); padding-left: 16px; margin: 18px 0 36px; }
+    .toc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 36px; }
+    .toc a { font-size: 13px; color: var(--white); background: linear-gradient(180deg,#16275f,#0f1d49); border: 1px solid var(--panel-edge); border-radius: 999px; padding: 7px 14px; text-decoration: none; }
+    .toc a:hover { border-color: var(--gold-2); }
+    .section { background: linear-gradient(180deg, rgba(13,28,74,.85), rgba(8,18,50,.85)); border: 1px solid var(--panel-edge); border-radius: 18px; padding: 26px 28px; margin-bottom: 22px; scroll-margin-top: 20px; }
+    .section.highlight { border-color: var(--gold-2); box-shadow: var(--glow-gold); }
+    .section h2 { font-family: var(--font-display); font-size: 28px; color: var(--gold-1); display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .section h2 .ic { font-size: 30px; -webkit-text-fill-color: initial; }
+    .section p { line-height: 1.65; margin-bottom: 12px; color: var(--white); }
+    .section p strong, .section b { color: var(--gold-1); }
+    .block-title { text-transform: uppercase; letter-spacing: 2px; font-size: 12px; color: var(--gold-2); font-weight: 700; margin: 18px 0 10px; }
+    ol.steps { counter-reset: s; list-style: none; display: grid; gap: 10px; }
+    ol.steps li { position: relative; padding: 10px 14px 10px 50px; background: rgba(5,11,34,.5); border: 1px solid var(--panel-edge); border-radius: 10px; line-height: 1.5; }
+    ol.steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; display: grid; place-items: center; font-family: var(--font-display); color: var(--bg-0); background: var(--gold-grad); border-radius: 8px; box-shadow: var(--glow-gold); }
+    ul.tips { list-style: none; display: grid; gap: 8px; }
+    ul.tips li { position: relative; padding-left: 28px; color: var(--muted); line-height: 1.5; }
+    ul.tips li::before { content: '💡'; position: absolute; left: 0; }
+    .footnote { color: var(--muted); font-size: 13px; margin-top: 30px; text-align: center; }
+    .footnote a { color: var(--gold-2); }
+  </style>
+</head>
+<body>
+  <div class="studio-bg"></div>
+  <div class="wrap">
+    <div class="top">
+      <a class="back" href="/regie">← Retour à la régie</a>
+      <a class="back" href="/" target="_blank">Écran de jeu ↗</a>
+    </div>
+    <div class="sub">★ Les règles du jeu ★</div>
+    <h1 class="gold-text">UNE FAMILLE EN OR</h1>
+    <p class="intro" id="intro"></p>
+    <nav class="toc" id="toc"></nav>
+    <div id="sections"></div>
+    <p class="footnote">Règles vérifiées d'après Wikipédia, les règles officielles TF1&nbsp;Games et Family&nbsp;Feud. Certaines valeurs (objectif, temps, nombre de manches et de questions de finale) varient selon les versions et sont configurables dans votre fichier&nbsp;JSON.</p>
+  </div>
+
+  <script src="/js/rules-data.js"></script>
+  <script>
+    const slug = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    document.getElementById('intro').textContent = RULES.intro;
+
+    const toc = document.getElementById('toc');
+    const cont = document.getElementById('sections');
+    RULES.sections.forEach((sec) => {
+      const id = slug(sec.title);
+      const a = document.createElement('a');
+      a.href = '#' + id;
+      a.textContent = `${sec.icon || ''} ${sec.title}`.trim();
+      toc.appendChild(a);
+
+      const el = document.createElement('section');
+      el.className = 'section' + (/finale/i.test(sec.title) ? ' highlight' : '');
+      el.id = id;
+      let html = `<h2><span class="ic">${sec.icon || ''}</span> ${sec.title}</h2>`;
+      (sec.paragraphs || []).forEach((p) => (html += `<p>${p}</p>`));
+      if (sec.steps && sec.steps.length) {
+        html += `<div class="block-title">Déroulé</div><ol class="steps">${sec.steps.map((s) => `<li>${s}</li>`).join('')}</ol>`;
+      }
+      if (sec.tips && sec.tips.length) {
+        html += `<div class="block-title">Conseils d'animation</div><ul class="tips">${sec.tips.map((t) => `<li>${t}</li>`).join('')}</ul>`;
+      }
+      el.innerHTML = html;
+      cont.appendChild(el);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+Déposez ici vos propres fichiers son (format MP3).
+Si un fichier est absent, le jeu génère automatiquement un son de remplacement.
+
+Noms de fichiers attendus :
+
+  intro.mp3      → générique de début / présentation
+  reveal.mp3     → bonne réponse révélée (le "ding")
+  wrong.mp3      → mauvaise réponse (le fameux "X" / buzzer)
+  buzzer.mp3     → buzz du face-à-face
+  applause.mp3   → applaudissements
+  final.mp3      → musique de la manche finale (peut être longue, jouée en boucle)
+  win.mp3        → jingle de victoire

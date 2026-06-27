@@ -1,0 +1,88 @@
+{
+  "title": "UNE FAMILLE EN OR",
+  "teams": ["Les Martin", "Les Dubois"],
+  "rounds": [
+    {
+      "multiplier": 1,
+      "question": "Citez un fruit que l'on met dans une salade de fruits.",
+      "answers": [
+        { "text": "Banane", "points": 32 },
+        { "text": "Pomme", "points": 24 },
+        { "text": "Fraise", "points": 18 },
+        { "text": "Orange", "points": 12 },
+        { "text": "Kiwi", "points": 8 },
+        { "text": "Raisin", "points": 6 }
+      ]
+    },
+    {
+      "multiplier": 2,
+      "question": "Citez quelque chose que l'on trouve dans une salle de bain.",
+      "answers": [
+        { "text": "Brosse à dents", "points": 30 },
+        { "text": "Serviette", "points": 22 },
+        { "text": "Savon", "points": 17 },
+        { "text": "Miroir", "points": 13 },
+        { "text": "Shampoing", "points": 10 },
+        { "text": "Baignoire", "points": 8 }
+      ]
+    },
+    {
+      "multiplier": 3,
+      "question": "Citez un animal que l'on peut voir dans un zoo.",
+      "answers": [
+        { "text": "Lion", "points": 35 },
+        { "text": "Éléphant", "points": 25 },
+        { "text": "Girafe", "points": 16 },
+        { "text": "Singe", "points": 12 },
+        { "text": "Zèbre", "points": 7 },
+        { "text": "Tigre", "points": 5 }
+      ]
+    }
+  ],
+  "final": {
+    "target": 200,
+    "timers": [20, 25],
+    "questions": [
+      {
+        "question": "À quelle heure la plupart des gens se lèvent-ils le matin ?",
+        "answers": [
+          { "text": "7h", "points": 40 },
+          { "text": "6h", "points": 30 },
+          { "text": "8h", "points": 20 }
+        ]
+      },
+      {
+        "question": "Citez un sport olympique.",
+        "answers": [
+          { "text": "Natation", "points": 35 },
+          { "text": "Athlétisme", "points": 28 },
+          { "text": "Football", "points": 15 }
+        ]
+      },
+      {
+        "question": "Citez une boisson chaude.",
+        "answers": [
+          { "text": "Café", "points": 45 },
+          { "text": "Thé", "points": 30 },
+          { "text": "Chocolat chaud", "points": 18 }
+        ]
+      },
+      {
+        "question": "Citez un métier porté par un uniforme.",
+        "answers": [
+          { "text": "Pompier", "points": 33 },
+          { "text": "Policier", "points": 27 },
+          { "text": "Infirmier", "points": 16 }
+        ]
+      },
+      {
+        "question": "Citez un pays où l'on parle français.",
+        "answers": [
+          { "text": "France", "points": 50 },
+          { "text": "Belgique", "points": 22 },
+          { "text": "Canada", "points": 15 }
+        ]
+      }
+    ]
+  }
+}

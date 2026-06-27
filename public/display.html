@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Une Famille en Or — Écran de jeu</title>
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/display.css" />
+</head>
+<body>
+  <div class="studio-bg"></div>
+  <div class="rays"></div>
+
+  <!-- Overlay d'activation du son (politique d'autoplay des navigateurs) -->
+  <div id="soundGate" class="sound-gate">
+    <div class="sound-gate__card">
+      <div class="sound-gate__logo gold-text">UNE FAMILLE EN OR</div>
+      <button id="soundGateBtn" class="sound-gate__btn">▶ Lancer l'écran de jeu</button>
+      <p class="sound-gate__hint">Cliquez pour activer le son et passer en plein écran.</p>
+    </div>
+  </div>
+
+  <main id="stage" class="stage">
+    <!-- Barre des scores (toujours visible) -->
+    <header class="scorebar">
+      <div class="team team--left" id="teamLeft">
+        <div class="team__name" data-team-name="0">ÉQUIPE 1</div>
+        <div class="team__score" data-team-score="0">0</div>
+      </div>
+      <div class="scorebar__center">
+        <div class="pot" id="potBox">
+          <div class="pot__label">CAGNOTTE</div>
+          <div class="pot__value" id="potValue">0</div>
+          <div class="pot__mult" id="potMult"></div>
+        </div>
+        <div class="strikes" id="strikes"></div>
+      </div>
+      <div class="team team--right" id="teamRight">
+        <div class="team__name" data-team-name="1">ÉQUIPE 2</div>
+        <div class="team__score" data-team-score="1">0</div>
+      </div>
+    </header>
+
+    <!-- VUE : logo -->
+    <section class="view view--logo" data-view="logo">
+      <div class="logo-wrap">
+        <div class="logo-sub">★ ★ ★</div>
+        <h1 class="logo-title gold-text" id="logoTitle">UNE FAMILLE EN OR</h1>
+        <div class="logo-sub">★ ★ ★</div>
+      </div>
+    </section>
+
+    <!-- VUE : question -->
+    <section class="view view--question" data-view="question">
+      <div class="round-badge" id="qRoundBadge">MANCHE</div>
+      <p class="question-text" id="qText"></p>
+    </section>
+
+    <!-- VUE : plateau -->
+    <section class="view view--board" data-view="board">
+      <p class="board-question" id="boardQuestion"></p>
+      <div class="board" id="board"></div>
+    </section>
+
+    <!-- VUE : manche finale -->
+    <section class="view view--final" data-view="final">
+      <div class="final-head">
+        <h2 class="final-title gold-text">MANCHE FINALE</h2>
+        <div class="final-family-name" id="finalFamilyName"></div>
+        <div class="final-active-banner" id="finalBanner">FINALISTE 1</div>
+        <div class="final-timer-big" id="finalTimerBig"></div>
+      </div>
+      <div class="final-colheads">
+        <span id="fc-head-0">FINALISTE 1</span>
+        <span id="fc-head-1">FINALISTE 2</span>
+      </div>
+      <div class="final-grid" id="finalGrid"></div>
+      <div class="final-progress-pub">
+        <div class="fpp-bar">
+          <div class="fpp-fill" id="fppFill"></div>
+          <div class="fpp-goal-line"></div>
+        </div>
+        <div class="fpp-text" id="fppText">TOTAL 0 / 200</div>
+      </div>
+    </section>
+
+    <!-- VUE : gagnant -->
+    <section class="view view--winner" data-view="winner">
+      <div class="winner-wrap">
+        <div class="winner-crown">♛</div>
+        <div class="winner-label">VAINQUEUR</div>
+        <h1 class="winner-name gold-text" id="winnerName">—</h1>
+        <div class="winner-score" id="winnerScore"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Face-à-face : annonce des buzzers -->
+  <div class="buzz-overlay" id="buzzOverlay"></div>
+
+  <div class="conn-dot" id="connDot" title="Connexion"></div>
+
+  <script src="/js/sound.js"></script>
+  <script src="/js/display.js"></script>
+</body>
+</html>

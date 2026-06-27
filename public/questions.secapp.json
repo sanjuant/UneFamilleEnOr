@@ -1,0 +1,88 @@
+{
+  "title": "UNE FAILLE EN OR",
+  "teams": ["Équipe Rouge", "Équipe Bleue"],
+  "rounds": [
+    {
+      "multiplier": 1,
+      "question": "Citez une attaque qui vise les applications web.",
+      "answers": [
+        { "text": "Injection SQL", "points": 30 },
+        { "text": "Cross-Site Scripting (XSS)", "points": 23 },
+        { "text": "Déni de service (DDoS)", "points": 17 },
+        { "text": "Hameçonnage (phishing)", "points": 13 },
+        { "text": "Force brute", "points": 10 },
+        { "text": "CSRF", "points": 7 }
+      ]
+    },
+    {
+      "multiplier": 2,
+      "question": "Citez une mesure pour protéger les données d'une application.",
+      "answers": [
+        { "text": "Chiffrement", "points": 32 },
+        { "text": "Contrôle d'accès / Authentification", "points": 24 },
+        { "text": "Hachage des mots de passe", "points": 16 },
+        { "text": "HTTPS / TLS", "points": 12 },
+        { "text": "Sauvegarde", "points": 9 },
+        { "text": "Anonymisation", "points": 7 }
+      ]
+    },
+    {
+      "multiplier": 3,
+      "question": "Citez un outil utilisé par les experts en sécurité.",
+      "answers": [
+        { "text": "Pare-feu (firewall / WAF)", "points": 28 },
+        { "text": "Scanner de vulnérabilités", "points": 22 },
+        { "text": "Burp Suite", "points": 16 },
+        { "text": "Antivirus", "points": 14 },
+        { "text": "SIEM", "points": 11 },
+        { "text": "Wireshark", "points": 9 }
+      ]
+    }
+  ],
+  "final": {
+    "target": 200,
+    "timers": [20, 25],
+    "questions": [
+      {
+        "question": "Citez une bonne pratique du développement sécurisé.",
+        "answers": [
+          { "text": "Valider les entrées utilisateur", "points": 38 },
+          { "text": "Utiliser des requêtes préparées", "points": 27 },
+          { "text": "Principe du moindre privilège", "points": 18 }
+        ]
+      },
+      {
+        "question": "Citez un type de test de sécurité.",
+        "answers": [
+          { "text": "Test d'intrusion (pentest)", "points": 40 },
+          { "text": "Analyse statique (SAST)", "points": 30 },
+          { "text": "Analyse dynamique (DAST)", "points": 16 }
+        ]
+      },
+      {
+        "question": "Que faut-il faire avant de mettre une application en production ?",
+        "answers": [
+          { "text": "Auditer / Tester la sécurité", "points": 42 },
+          { "text": "Mettre à jour les dépendances", "points": 28 },
+          { "text": "Supprimer les comptes par défaut", "points": 15 }
+        ]
+      },
+      {
+        "question": "Citez une norme ou un référentiel de sécurité.",
+        "answers": [
+          { "text": "OWASP", "points": 45 },
+          { "text": "ISO 27001", "points": 30 },
+          { "text": "RGPD", "points": 18 }
+        ]
+      },
+      {
+        "question": "Citez une information sensible à protéger dans une application.",
+        "answers": [
+          { "text": "Mot de passe", "points": 48 },
+          { "text": "Données bancaires", "points": 26 },
+          { "text": "Données personnelles", "points": 15 }
+        ]
+      }
+    ]
+  }
+}

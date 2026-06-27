@@ -1,0 +1,109 @@
+/* ------------------------------------------------------------------ *
+ *  Une Famille en Or — base commune (palette, polices, reset)
+ * ------------------------------------------------------------------ */
+
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Bleu nuit du plateau */
+  --bg-0: #050b22;
+  --bg-1: #0a1740;
+  --bg-2: #122a63;
+  --panel: #0d1c4a;
+  --panel-edge: #1d3a86;
+
+  /* Or */
+  --gold-1: #ffe169;
+  --gold-2: #f5c518;
+  --gold-3: #c8920b;
+  --gold-deep: #7a5a06;
+
+  --white: #f4f7ff;
+  --muted: #9fb0e0;
+  --red: #ff3b3b;
+  --green: #38d66b;
+
+  --gold-grad: linear-gradient(180deg, var(--gold-1) 0%, var(--gold-2) 45%, var(--gold-3) 100%);
+  --glow-gold: 0 0 22px rgba(245, 197, 24, 0.55);
+
+  --font-display: 'Anton', 'Arial Narrow', sans-serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: var(--font-body);
+  color: var(--white);
+  background: var(--bg-0);
+  -webkit-font-smoothing: antialiased;
+}
+
+.gold-text {
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Fond "rideau de studio" : halo radial + texture grain discrète. */
+.studio-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -10%, var(--bg-2) 0%, var(--bg-1) 40%, var(--bg-0) 100%);
+}
+.studio-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 3px 3px;
+  opacity: 0.5;
+  mix-blend-mode: screen;
+}
+
+/* Rayons de lumière en arrière-plan */
+.rays {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.35;
+}
+.rays::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  left: 50%;
+  width: 180vmax;
+  height: 180vmax;
+  transform: translateX(-50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 8deg,
+    rgba(245, 197, 24, 0.10) 8deg 16deg,
+    transparent 16deg 24deg
+  );
+  animation: spin 90s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: translateX(-50%) rotate(360deg);
+  }
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  color: inherit;
+}
