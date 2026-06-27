@@ -168,6 +168,12 @@ function recomputePot() {
   }
 }
 
+/** Le jeu a commencé sur le plateau : on retire le prompt « À vos buzzers »
+    (si personne n'a buzzé). Le gagnant éventuel d'un buzz reste inchangé. */
+function endFaceOffIfArmed() {
+  if (state.buzzer && state.buzzer.armed) state.buzzer.armed = false;
+}
+
 /** Compte les buzzers connectés par équipe (mis à jour avant chaque diffusion). */
 function recomputeBuzzerConnected() {
   const counts = [0, 0];
@@ -305,6 +311,7 @@ const handlers = {
     if (state.board && state.board.answers[p.index]) {
       state.board.answers[p.index].revealed = true;
       state.view = 'board';
+      endFaceOffIfArmed(); // le jeu a commencé : on retire « À vos buzzers »
     }
   },
 
@@ -316,6 +323,7 @@ const handlers = {
 
   revealAll() {
     if (state.board) state.board.answers.forEach((a) => (a.revealed = true));
+    endFaceOffIfArmed();
   },
 
   setStrikes(p) {
@@ -323,7 +331,10 @@ const handlers = {
   },
 
   addStrike() {
-    if (state.board) state.board.strikes = Math.min(3, state.board.strikes + 1);
+    if (state.board) {
+      state.board.strikes = Math.min(3, state.board.strikes + 1);
+      endFaceOffIfArmed();
+    }
   },
 
   clearStrikes() {

@@ -2,7 +2,8 @@
  *  Une Famille en Or — base commune (palette, polices, reset)
  * ------------------------------------------------------------------ */
 
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+/* Polices hébergées localement (aucune dépendance externe — rapide et hors-ligne). */
+@import url('/css/fonts.css');
 
 :root {
   /* Bleu nuit du plateau */
