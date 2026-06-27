@@ -44,17 +44,20 @@ body.anim {
   flex-wrap: wrap;
 }
 .anim-scores .sc {
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 15px;
+  color: var(--white);
   background: var(--panel);
   border: 1px solid var(--panel-edge);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 5px 12px;
 }
 .anim-scores .sc b {
+  /* Police de corps (Outfit) : Anton « bave » et devient illisible en petit. */
   color: var(--gold-1);
-  font-family: var(--font-display);
-  margin-right: 4px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-right: 5px;
 }
 
 .anim-phase {
