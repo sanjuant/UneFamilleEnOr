@@ -53,22 +53,53 @@ const ENV_LAN = process.env.LAN_HOST
 
 let chosenLanUrl = null; // IP choisie par l'opérateur dans la régie
 
+// La page animateur peut-elle PILOTER le jeu (gérer réponses, scores, finale…) ?
+// false = lecture seule (« vision » : voit questions/réponses sans agir).
+// Réglable depuis la régie ; persiste au chargement d'un nouveau JSON / à la remise à zéro.
+// Défaut fixable au démarrage : ANIMATOR_CONTROL=1 (utile pour un dispositif piloté
+// depuis la tablette de l'animateur, qui survit alors aux redémarrages du serveur).
+let animatorControl = /^(1|true|on|oui)$/i.test(process.env.ANIMATOR_CONTROL || '');
+
 // Code d'accès des surfaces de CONTRÔLE (régie + animateur).
 // Défini par REGIE_CODE, sinon généré (6 chiffres aléatoires sûrs).
 const crypto = require('crypto');
 const ACCESS_CODE = (process.env.REGIE_CODE || String(crypto.randomInt(100000, 1000000))).toString();
+
+// Code distinct (optionnel) pour la page animateur. S'il est défini, le rôle
+// (régie / animateur) est déduit du CODE saisi, pas du paramètre ?role= envoyé par
+// le client : la séparation vision/pilotage devient alors un vrai cloisonnement
+// (un porteur du seul code animateur ne peut jamais obtenir les droits régie).
+// Sinon, code unique partagé : le rôle reste indicatif (cf. effectiveRole).
+const ANIMATEUR_CODE = (process.env.ANIMATEUR_CODE || '').toString();
+
+/** Rôle correspondant à un code (null si aucun ne correspond). */
+function roleForCode(code) {
+  if (code && code === ACCESS_CODE) return 'regie';
+  if (code && ANIMATEUR_CODE && code === ANIMATEUR_CODE) return 'animateur';
+  return null;
+}
+
+/** Rôle effectif du socket.
+ *  - Codes distincts (ANIMATEUR_CODE défini) : l'autorité vient du code validé.
+ *  - Code unique partagé : le rôle est indicatif (?role=), avec un défaut FAIL-SAFE
+ *    (tout ce qui n'est pas explicitement « regie » est traité comme animateur). */
+function effectiveRole(queryRole, codeRole) {
+  if (ANIMATEUR_CODE) return codeRole === 'regie' ? 'regie' : 'animateur';
+  return queryRole === 'regie' ? 'regie' : 'animateur';
+}
 
 // Anti-brute-force : limite les tentatives de code échouées par IP.
 const authFails = new Map(); // ip -> { count, lockedUntil }
 const AUTH_MAX = 8; // échecs avant verrouillage
 const AUTH_LOCK_MS = 60000; // durée du verrouillage
 
-/** Valide un code pour une IP, avec verrouillage progressif. Renvoie {ok, locked}. */
+/** Valide un code pour une IP, avec verrouillage progressif. Renvoie {ok, locked, role}. */
 function validateCode(ip, code) {
   const rec = authFails.get(ip);
   if (rec && rec.lockedUntil > Date.now()) return { ok: false, locked: true };
   if (!code) return { ok: false }; // pas de code = spectateur, pas une tentative
-  const ok = code === ACCESS_CODE;
+  const role = roleForCode(code);
+  const ok = !!role;
   if (ok) {
     authFails.delete(ip);
   } else {
@@ -82,7 +113,7 @@ function validateCode(ip, code) {
     }
     authFails.set(ip, r);
   }
-  return { ok };
+  return { ok, role };
 }
 
 /** URL réseau effective (choix opérateur > env > meilleure candidate). */
@@ -477,6 +508,12 @@ const handlers = {
     refreshLan();
   },
 
+  // ---- Réglages ----
+  // Autorise / retire le pilotage à la page animateur (réservé à la régie).
+  setAnimatorControl(p) {
+    animatorControl = !!p.on;
+  },
+
   // ---- Gagnant ----
   setWinner(p) {
     state.winnerTeam = p.index === null ? null : Number(p.index);
@@ -553,10 +590,12 @@ function publicState() {
 
 /** Envoie l'état adapté au niveau d'accès du socket (complet si authentifié). */
 function sendStateTo(ws) {
+  state.animatorControl = animatorControl;
   ws.send(JSON.stringify({ type: 'state', state: ws._authed ? state : publicState() }));
 }
 
 function broadcastState() {
+  state.animatorControl = animatorControl;
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();
@@ -594,14 +633,21 @@ wss.on('connection', (ws, req) => {
   });
   ws._ip = (req.socket && req.socket.remoteAddress) || 'unknown';
   // Authentification de contrôle : code passé en query (?code=...) à la connexion.
+  // Le rôle (?role=regie|animateur) sert à appliquer le mode lecture seule animateur.
   let code = '';
+  let role = '';
   try {
-    code = new URL(req.url, 'http://localhost').searchParams.get('code') || '';
+    const u = new URL(req.url, 'http://localhost');
+    code = u.searchParams.get('code') || '';
+    role = u.searchParams.get('role') || '';
   } catch {
     code = '';
+    role = '';
   }
+  ws._queryRole = role; // indice fourni par le client (peut être ignoré, cf. effectiveRole)
   const res = validateCode(ws._ip, code);
   ws._authed = res.ok;
+  ws._role = effectiveRole(role, res.role);
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();
@@ -621,6 +667,7 @@ wss.on('connection', (ws, req) => {
       const wasAuthed = ws._authed;
       const res = validateCode(ws._ip, (msg.code || '').toString());
       ws._authed = res.ok;
+      if (res.ok) ws._role = effectiveRole(ws._queryRole, res.role); // le code peut déterminer le rôle
       ws.send(JSON.stringify({ type: 'auth', ok: ws._authed, locked: !!res.locked }));
       // Si on vient d'obtenir l'accès, on pousse l'état complet (réponses incluses).
       if (ws._authed && !wasAuthed) sendStateTo(ws);
@@ -633,6 +680,12 @@ wss.on('connection', (ws, req) => {
         ws.send(JSON.stringify({ type: 'auth', ok: false }));
         return;
       }
+      // Fail-safe : tout ce qui n'est pas explicitement la régie est soumis au gating.
+      const isAnimator = ws._role !== 'regie';
+      // Animateur en lecture seule (vision) : aucune commande ne passe.
+      if (isAnimator && !animatorControl) return;
+      // Le mode de l'animateur ne se change que depuis la régie.
+      if (msg.action === 'setAnimatorControl' && isAnimator) return;
       const handler = handlers[msg.action];
       if (handler) {
         try {
@@ -644,6 +697,7 @@ wss.on('connection', (ws, req) => {
       }
     } else if (msg.type === 'sound') {
       if (!ws._authed) return; // les sons sont déclenchés par le contrôle
+      if (ws._role !== 'regie' && !animatorControl) return; // animateur en vision
       // Événement sonore transitoire : on relaie à tous les écrans.
       // Anti-rebond : ignore un même son redéclenché < 150 ms après (double-clic,
       // ou régie + animateur qui agissent en parallèle).
@@ -687,10 +741,17 @@ server.listen(PORT, () => {
   console.log(`  Animateur    : http://localhost:${PORT}/animateur`);
   console.log(`  Règles       : http://localhost:${PORT}/regles`);
   console.log(`  Buzzer       : http://localhost:${PORT}/buzzer\n`);
-  console.log(`  🔒 Code d'accès régie/animateur : ${ACCESS_CODE}`);
-  if (!process.env.REGIE_CODE) {
-    console.log('     (aléatoire — fixez-le avec REGIE_CODE=moncode pour le garder)');
+  if (ANIMATEUR_CODE) {
+    console.log(`  🔒 Code RÉGIE      : ${ACCESS_CODE}`);
+    console.log(`  🔒 Code ANIMATEUR  : ${ANIMATEUR_CODE}  (vision/pilotage cloisonné par code)`);
+  } else {
+    console.log(`  🔒 Code d'accès régie/animateur : ${ACCESS_CODE}`);
+    if (!process.env.REGIE_CODE) {
+      console.log('     (aléatoire — fixez-le avec REGIE_CODE=moncode pour le garder)');
+    }
+    console.log('     (code animateur distinct : démarrer avec ANIMATEUR_CODE=autrecode)');
   }
+  console.log(`  📱 Animateur par défaut : ${animatorControl ? 'PILOTAGE' : 'vision seule'} (réglable en régie ; ANIMATOR_CONTROL=1 pour piloter par défaut)`);
   console.log('');
   console.log(`  Réseau (téléphones) : ${currentLanUrl()}/buzzer`);
   const cands = lanCandidates();

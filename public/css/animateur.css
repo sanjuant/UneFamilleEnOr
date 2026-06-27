@@ -400,20 +400,123 @@ body.anim {
   font-size: 14px;
   margin-bottom: 4px;
 }
-.fq-read__a {
-  list-style: none;
+
+/* Manche finale : chips de réponses prédéfinies (pilotage) */
+.afchips {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding-left: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
 }
-.fq-read__a li {
-  font-size: 13px;
-  color: var(--muted);
+.afchip {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #1b2f6b, #142457);
+  border: 1px solid var(--panel-edge);
+  color: var(--white);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
-.fq-read__a b {
+.afchip b {
   color: var(--gold-1);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
+  font-weight: 800;
+}
+.afchip:active {
+  filter: brightness(1.2);
+}
+.afchip.used-0 {
+  border-color: var(--gold-2);
+  background: linear-gradient(180deg, #2a3a1f, #1f2d14);
+}
+.afchip.used-1 {
+  border-color: #6ca4ff;
+}
+.afchip.used-0.used-1 {
+  /* Utilisée par les deux finalistes = doublon */
+  border-color: var(--red);
+  background: linear-gradient(180deg, #4a1414, #2e0d0d);
+}
+
+/* Cellules révélables au toucher */
+.fcellr.tappable {
+  cursor: pointer;
+}
+.fcellr.tappable:active {
+  filter: brightness(1.18);
+}
+.fcellr.revealed {
+  border-color: var(--green);
+}
+.fcellr.revealed .fcellr-tag {
+  color: var(--green);
+}
+
+/* Toast (doublon effacé) */
+.final-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%) translateY(20px);
+  background: linear-gradient(180deg, #7a1f1f, #531414);
+  border: 1px solid #a33;
+  color: var(--white);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 600;
+  max-width: 90vw;
+  text-align: center;
+}
+.final-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Bandeau « mode vision » */
+.anim-mode-note {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold-1);
+  background: linear-gradient(180deg, #1b2f6b, #142457);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  padding: 9px 13px;
+  margin-bottom: 12px;
+}
+.anim-mode-note[hidden] {
+  display: none;
+}
+
+/* Mode lecture seule : on masque tous les contrôles de pilotage */
+body.vision .strikes-mini,
+body.vision .panel__tools,
+body.vision .award,
+body.vision .final-ctrls,
+body.vision .rounds-actions {
+  display: none;
+}
+body.vision .ans,
+body.vision .round {
+  pointer-events: none;
+  cursor: default;
+}
+body.vision .ans-act {
+  visibility: hidden;
+}
+/* Cartes de manches : signalées non actionnables en vision (retire le halo « bouton »). */
+body.vision .round {
+  opacity: 0.7;
+  box-shadow: none;
 }
 
 /* Manches : lancement */

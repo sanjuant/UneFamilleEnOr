@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 const connDot = $('conn');
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/?code=${encodeURIComponent(ctrlCode)}`);
+  ws = new WebSocket(`ws://${location.host}/?role=animateur&code=${encodeURIComponent(ctrlCode)}`);
   ws.onopen = () => connDot.classList.add('ok');
   ws.onclose = () => {
     connDot.classList.remove('ok');
@@ -34,13 +34,17 @@ function connect() {
 }
 connect();
 
+// L'animateur ne peut piloter que si la régie l'a autorisé (sinon : vision seule).
+function canControl() {
+  return authed && !!(state && state.animatorControl);
+}
 function cmd(action, payload = {}) {
-  if (!authed) return;
+  if (!canControl()) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'command', action, payload }));
 }
 // Déclenche un son sur l'écran de jeu (cette page ne joue rien localement).
 function sound(name) {
-  if (!authed) return;
+  if (!canControl()) return;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'sound', name }));
 }
 
@@ -130,6 +134,19 @@ $('afReveal').addEventListener('click', () => {
   sound('reveal');
 });
 
+// Manche finale : chips (réponses prédéfinies) + révélation des cellules.
+// Délégation unique sur le conteneur (réécrit à chaque rendu).
+$('finalRead').addEventListener('click', (e) => {
+  if (!canControl() || !(state && state.finalState)) return;
+  const chip = e.target.closest('.afchip');
+  if (chip) {
+    fillFinalChip(Number(chip.dataset.q), chip.dataset.ans, Number(chip.dataset.pts));
+    return;
+  }
+  const cell = e.target.closest('.fcellr[data-q]');
+  if (cell) toggleFinalCellReveal(Number(cell.dataset.q), Number(cell.dataset.col));
+});
+
 function allRoundsPlayed() {
   const played = state.playedRounds || [];
   return state.rounds.length > 0 && state.rounds.every((_, i) => played.includes(i));
@@ -164,6 +181,12 @@ const VIEW_LABELS = { logo: 'Logo', question: 'Question', board: 'Plateau', fina
 
 function render() {
   if (!state) return;
+
+  // Mode lecture seule (vision) vs pilotage : masque les contrôles si non autorisé.
+  const ctrl = !!state.animatorControl;
+  document.body.classList.toggle('vision', !ctrl);
+  const modeNote = $('animModeNote');
+  if (modeNote) modeNote.hidden = ctrl;
 
   $('spoilerBtn').textContent = hideAnswers ? '🙈 Réponses masquées' : '👁 Réponses visibles';
   $('spoilerBtn').classList.toggle('on', hideAnswers);
@@ -243,6 +266,51 @@ function renderBoard() {
 const normFinal = (s) =>
   (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
+// Chip cliqué : donne la réponse (avec ses points) au finaliste EN JEU.
+// Doublon du finaliste 1 : on n'écrit rien (pas d'aller-retour visible à l'écran),
+// on signale directement (buzz + toast).
+function fillFinalChip(q, answer, points) {
+  const fs = state.finalState;
+  if (!fs) return;
+  const col = fs.activePlayer;
+  if (col === 1 && normFinal(answer) === normFinal(fs.cells[q][0].answer)) {
+    sound('buzzer');
+    showAnimToast('⛔ Doublon ! Réponse identique au finaliste 1 — demandez-en une autre.');
+    return;
+  }
+  cmd('setFinalCell', { q, col, answer, points });
+}
+
+// Tap sur une case : bascule sa révélation (avec son adapté au score attendu).
+function toggleFinalCellReveal(q, col) {
+  const fs = state.finalState;
+  if (!fs) return;
+  const c = fs.cells[q][col];
+  const revealed = !c.revealed;
+  cmd('revealFinalCell', { q, col, revealed });
+  if (revealed) {
+    const props = (fs.questions[q] && fs.questions[q].answers) || [];
+    const m = props.find((a) => normFinal(a.text) === normFinal(c.answer));
+    const pts = m ? m.points || 0 : Number(c.points) || 0;
+    sound(pts > 0 ? 'reveal' : 'wrong');
+  }
+}
+
+let animToastTimer;
+function showAnimToast(msg) {
+  let el = $('animToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'animToast';
+    el.className = 'final-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(animToastTimer);
+  animToastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
 function renderFinal() {
   const fs = state.finalState;
   const show = state.view === 'final' && fs;
@@ -256,42 +324,63 @@ function renderFinal() {
   const n1 = names[1] || 'Finaliste 2';
   const who = fs.activePlayer === 0 ? n0 : n1;
   const reached = fs.total >= fs.target;
+  const ctrl = !!state.animatorControl; // pilotage autorisé ?
 
-  // Par question : la réponse SAISIE de chaque finaliste. Le finaliste 1 reste
-  // visible pour que l'animateur repère les doublons du finaliste 2.
+  // Par question : réponses prédéfinies + la réponse SAISIE de chaque finaliste.
+  // Le finaliste 1 reste visible pour repérer les doublons du finaliste 2.
   const rows = (fs.questions || [])
     .map((q, i) => {
       const pair = fs.cells[i] || [];
-      const c0 = pair[0] || { answer: '', points: 0 };
-      const c1 = pair[1] || { answer: '', points: 0 };
+      const c0 = pair[0] || { answer: '', points: 0, revealed: false };
+      const c1 = pair[1] || { answer: '', points: 0, revealed: false };
       const dn0 = normFinal(c0.answer);
       const dn1 = normFinal(c1.answer);
       const dup = !!dn0 && !!dn1 && dn0 === dn1; // doublon réel : les deux non vides et identiques
-      const hint = hideAnswers
-        ? ''
-        : (q.answers || []).map((a) => `${escapeHtml(a.text)} (${a.points})`).join(' · ');
-      const cell = (c, name, active) => `
-        <div class="fcellr ${active ? 'active' : ''} ${dup && c === c1 ? 'dup' : ''}">
-          <span class="fcellr-tag">${escapeHtml(name)}</span>
-          <span class="fcellr-ans">${c.answer ? escapeHtml(c.answer) : '—'}${dup && c === c1 ? ' ⚠' : ''}</span>
+
+      // Réponses attendues : chips tappables (pilotage) ou aide-mémoire (vision).
+      let answersBlock = '';
+      if (!hideAnswers) {
+        if (ctrl) {
+          const chips = (q.answers || [])
+            .map((a) => {
+              const n = normFinal(a.text);
+              const u0 = n && normFinal(c0.answer) === n ? 'used-0' : '';
+              const u1 = n && normFinal(c1.answer) === n ? 'used-1' : '';
+              return `<button class="afchip ${u0} ${u1}" data-q="${i}" data-ans="${escapeAttr(a.text)}" data-pts="${a.points}">${escapeHtml(a.text)} <b>${a.points}</b></button>`;
+            })
+            .join('');
+          if (chips) answersBlock = `<div class="afchips" title="Donne la réponse au finaliste en jeu">${chips}</div>`;
+        } else {
+          const hint = (q.answers || []).map((a) => `${escapeHtml(a.text)} (${a.points})`).join(' · ');
+          if (hint) answersBlock = `<div class="fq-hint">💡 ${hint}</div>`;
+        }
+      }
+
+      const cell = (c, name, active, col) => `
+        <div class="fcellr ${active ? 'active' : ''} ${dup && col === 1 ? 'dup' : ''} ${c.revealed ? 'revealed' : ''} ${ctrl ? 'tappable' : ''}"${ctrl ? ` data-q="${i}" data-col="${col}"` : ''}>
+          <span class="fcellr-tag">${escapeHtml(name)}${c.revealed ? ' ✓' : ''}</span>
+          <span class="fcellr-ans">${c.answer ? escapeHtml(c.answer) : '—'}${dup && col === 1 ? ' ⚠' : ''}</span>
           <span class="fcellr-pts">${c.points || ''}</span>
         </div>`;
       return `
       <div class="fq-read">
         <div class="fq-read__q">Q${i + 1}. ${escapeHtml(q.question)}</div>
-        ${hint ? `<div class="fq-hint">💡 ${hint}</div>` : ''}
+        ${answersBlock}
         <div class="fcell-row">
-          ${cell(c0, n0, fs.activePlayer === 0)}
-          ${cell(c1, n1, fs.activePlayer === 1)}
+          ${cell(c0, n0, fs.activePlayer === 0, 0)}
+          ${cell(c1, n1, fs.activePlayer === 1, 1)}
         </div>
       </div>`;
     })
     .join('');
 
+  const note = ctrl
+    ? 'Touchez une réponse pour la donner au finaliste en jeu · touchez une case pour la révéler. ⚠ = doublon.'
+    : 'Réponses saisies des finalistes. ⚠ = doublon (identique au finaliste 1).';
   $('finalRead').innerHTML = `
     <div class="fr-row"><span>Au tour de</span><b>${escapeHtml(who)}</b></div>
     <div class="fr-row"><span>Total</span><b class="${reached ? 'ok' : ''}">${fs.total} / ${fs.target}</b></div>
-    <p class="fr-note">Réponses saisies des finalistes. ⚠ = doublon (identique au finaliste 1).</p>
+    <p class="fr-note">${note}</p>
     ${rows}`;
 
   // Contrôles : finaliste actif + libellé du chrono
@@ -362,4 +451,7 @@ function renderRounds() {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function escapeAttr(s) {
+  return escapeHtml(s);
 }

@@ -724,6 +724,26 @@ body.regie {
   font-size: 12px;
 }
 
+/* Page animateur : droits */
+.anim-ctrl-hint {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.anim-ctrl-hint b {
+  color: var(--gold-1);
+}
+.anim-ctrl-state {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.anim-ctrl-state.on {
+  color: var(--gold-1);
+}
+
 /* Barre d'état permanente */
 .statusbar {
   display: flex;

@@ -16,7 +16,7 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 📖 **Règles intégrées** : page `/regles` (avec déroulé détaillé de la manche finale) accessible depuis la régie.
 - 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main). **QR code** de connexion intégré.
 - ⚡ **Régie fluide** : lancement d'une manche en 1 clic (question + buzzers armés), **raccourcis clavier**, barre d'état permanente, équipe active déduite du buzz.
-- 📱 **Vue Animateur** : page `/animateur` (smartphone/tablette) pour l'animateur sur scène — voir la question de la prochaine manche, la lancer, révéler les réponses (ou les **garder masquées** pour ne pas se spoiler).
+- 📱 **Vue Animateur** : page `/animateur` (smartphone/tablette) pour l'animateur sur scène — voir la question de la prochaine manche, la lancer, révéler les réponses (ou les **garder masquées** pour ne pas se spoiler). La régie choisit s'il **pilote** le jeu ou reste en **vision seule** (lecture).
 - 🔒 **Code d'accès** : la régie et l'animateur sont protégés par un code (page **et** commandes WebSocket) ; l'écran de jeu et les buzzers restent ouverts.
 
 ### La manche finale, pas à pas
@@ -90,6 +90,16 @@ La **régie** (`/regie`) et l'**animateur** (`/animateur`) sont protégés par u
 
 > C'est une protection légère adaptée à une soirée en réseau local privé (anti-curieux / anti-blague), pas une sécurité de niveau Internet.
 
+### Régie vs animateur : coordination ou vrai cloisonnement
+
+Avec le **code unique partagé** (cas par défaut), la séparation **vision / pilotage** de l'animateur (voir plus bas) est une **commodité de coordination entre opérateurs** : quiconque a le code peut, en théorie, ouvrir la régie. Ce n'est pas un verrou.
+
+Pour un **vrai cloisonnement** (confier la tablette animateur à un tiers sans lui donner les pleins pouvoirs), donnez un **code distinct** à l'animateur :
+```bash
+REGIE_CODE=regie123 ANIMATEUR_CODE=anim456 npm start
+```
+Le rôle est alors déduit du **code saisi** (et non du paramètre d'URL) : le porteur du seul code animateur ne peut jamais obtenir les droits régie, et le mode « vision seule » devient infranchissable depuis sa tablette.
+
 ## Vue Animateur (scène)
 
 L'animateur ouvre **`http://<IP-du-PC>:3000/animateur`** sur son téléphone/tablette. Il peut :
@@ -98,9 +108,20 @@ L'animateur ouvre **`http://<IP-du-PC>:3000/animateur`** sur son téléphone/tab
 - basculer en **mode anti-spoiler** (🙈) pour garder les réponses masquées sur son propre écran et ne pas se gâcher la surprise — les réponses déjà révélées au public restent visibles ;
 - donner les **fautes** (✖) et la **cagnotte**.
 
-**Pendant la manche finale**, l'animateur voit en plus : le **chrono en direct**, et les **réponses saisies des finalistes** — celles du finaliste 1 restent visibles pour repérer les **doublons** du finaliste 2 (signalés par ⚠). Quand le chrono atteint 0, un **son** retentit sur l'écran de jeu et le chrono disparaît.
+**Pendant la manche finale**, l'animateur voit en plus : le **chrono en direct**, et les **réponses saisies des finalistes** — celles du finaliste 1 restent visibles pour repérer les **doublons** du finaliste 2 (signalés par ⚠). En mode pilotage, il dispose aussi des **chips de réponses prédéfinies** (un appui donne la réponse au finaliste en jeu, avec gestion du doublon) et révèle les cases **au toucher** — exactement comme la régie.
 
-C'est une vue compagnon synchronisée : tout ce qu'il fait apparaît sur l'écran de jeu, en complément (ou en remplacement ponctuel) de la régie.
+### Droits de l'animateur : pilotage ou vision seule
+
+Depuis la **régie** (carte « 📱 Page animateur »), on choisit le rôle de la page animateur :
+- **🎮 Peut piloter** : l'animateur agit sur le jeu (révéler, fautes, scores, manche finale, chips…).
+- **👁 Vision seule** (par défaut) : l'animateur **voit** les questions et réponses mais **n'agit pas** — la régie garde la main. La page affiche un bandeau « Mode vision » et masque tous les contrôles.
+
+Le choix est **appliqué côté serveur** (une page animateur en vision ne peut envoyer aucune commande) et persiste au chargement d'un nouveau JSON / à la remise à zéro. Le **défaut est « vision seule »** ; il repart ainsi à chaque redémarrage du serveur. Pour un dispositif piloté depuis la tablette de l'animateur, démarrez avec `ANIMATOR_CONTROL=1` afin que le **pilotage soit actif par défaut** (survit aux redémarrages) :
+```bash
+ANIMATOR_CONTROL=1 npm start
+```
+
+C'est une vue compagnon synchronisée : tout ce que l'animateur fait (s'il pilote) apparaît sur l'écran de jeu, en complément (ou en remplacement ponctuel) de la régie.
 
 ## Format du fichier de questions
 

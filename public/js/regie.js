@@ -9,7 +9,7 @@ let ctrlCode = localStorage.getItem('ctrlCode') || '';
 const connEl = document.getElementById('conn');
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/?code=${encodeURIComponent(ctrlCode)}`);
+  ws = new WebSocket(`ws://${location.host}/?role=regie&code=${encodeURIComponent(ctrlCode)}`);
   ws.onopen = () => {
     connEl.textContent = '● en ligne';
     connEl.classList.add('ok');
@@ -185,6 +185,10 @@ document.getElementById('lanSelect').addEventListener('change', (e) => cmd('setL
 // Manche suivante (1 clic)
 document.getElementById('nextRoundBtn').addEventListener('click', nextRound);
 
+// Droits de la page animateur (vision seule / pilotage)
+document.getElementById('animModeView').addEventListener('click', () => cmd('setAnimatorControl', { on: false }));
+document.getElementById('animModeCtrl').addEventListener('click', () => cmd('setAnimatorControl', { on: true }));
+
 // Aide des raccourcis clavier
 const shortcutsOverlay = document.getElementById('shortcutsOverlay');
 const toggleShortcuts = (show) => {
@@ -272,11 +276,28 @@ function render() {
   );
 
   renderStatusbar();
+  renderAnimMode();
   renderTeams();
   renderRounds();
   renderBoard();
   renderFinal();
   renderBuzzer();
+}
+
+// Réglage des droits de l'animateur : reflète le mode courant.
+function renderAnimMode() {
+  const on = !!state.animatorControl;
+  const view = document.getElementById('animModeView');
+  const ctrl = document.getElementById('animModeCtrl');
+  if (view) view.classList.toggle('active', !on);
+  if (ctrl) ctrl.classList.toggle('active', on);
+  const lbl = document.getElementById('animCtrlState');
+  if (lbl) {
+    lbl.textContent = on
+      ? '🎮 L’animateur peut piloter le jeu.'
+      : '👁 L’animateur est en vision seule (lecture).';
+    lbl.classList.toggle('on', on);
+  }
 }
 
 const VIEW_LABELS = { logo: 'Logo', question: 'Question', board: 'Plateau', final: 'Manche finale', winner: 'Gagnant' };
