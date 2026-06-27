@@ -239,9 +239,12 @@ function renderFinal() {
   // visible pour que l'animateur repère les doublons du finaliste 2.
   const rows = (fs.questions || [])
     .map((q, i) => {
-      const c0 = fs.cells[i][0];
-      const c1 = fs.cells[i][1];
-      const dup = c1.answer && normFinal(c1.answer) === normFinal(c0.answer);
+      const pair = fs.cells[i] || [];
+      const c0 = pair[0] || { answer: '', points: 0 };
+      const c1 = pair[1] || { answer: '', points: 0 };
+      const dn0 = normFinal(c0.answer);
+      const dn1 = normFinal(c1.answer);
+      const dup = !!dn0 && !!dn1 && dn0 === dn1; // doublon réel : les deux non vides et identiques
       const hint = hideAnswers
         ? ''
         : (q.answers || []).map((a) => `${escapeHtml(a.text)} (${a.points})`).join(' · ');

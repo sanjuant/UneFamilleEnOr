@@ -231,6 +231,7 @@ const handlers = {
   // ---- Chargement / configuration ----
   load(p) {
     const data = p.data || {};
+    clearFinalTimerExpiry();
     state = freshState();
     state.title = (data.title || 'UNE FAMILLE EN OR').toString();
     if (Array.isArray(data.teams) && data.teams.length >= 2) {
@@ -246,6 +247,7 @@ const handlers = {
   },
 
   reset() {
+    clearFinalTimerExpiry();
     const rounds = state.rounds;
     const final = state.final;
     const title = state.title;
@@ -356,6 +358,7 @@ const handlers = {
 
   // ---- Manche finale ----
   startFinal() {
+    clearFinalTimerExpiry();
     state.finalState = buildFinalState();
     state.view = 'final';
   },
@@ -493,7 +496,7 @@ function scheduleFinalTimerExpiry(endsAt, ms) {
     if (fs && fs.timer.running && fs.timer.endsAt === endsAt) {
       fs.timer.running = false;
       fs.timer.remaining = 0;
-      if (state.view === 'final') broadcast({ type: 'sound', name: 'buzzer' }); // fin du temps
+      if (state.view === 'final') broadcast({ type: 'sound', name: 'timesup' }); // fin du temps
       broadcastState();
     }
   }, ms);

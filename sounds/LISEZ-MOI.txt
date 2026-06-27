@@ -7,6 +7,7 @@ Noms de fichiers attendus :
   reveal.mp3     → bonne réponse révélée (le "ding")
   wrong.mp3      → mauvaise réponse (le fameux "X" / buzzer)
   buzzer.mp3     → buzz du face-à-face
+  timesup.mp3    → fin du temps de la manche finale
   applause.mp3   → applaudissements
   final.mp3      → musique de la manche finale (peut être longue, jouée en boucle)
   win.mp3        → jingle de victoire

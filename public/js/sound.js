@@ -11,6 +11,7 @@ const SoundManager = (() => {
     reveal: 'reveal.mp3',    // bonne réponse révélée (ding)
     wrong: 'wrong.mp3',      // mauvaise réponse (buzzer / le X)
     buzzer: 'buzzer.mp3',    // buzz du face-à-face
+    timesup: 'timesup.mp3',  // fin du temps (manche finale)
     applause: 'applause.mp3',// applaudissements
     final: 'final.mp3',      // musique de la manche finale
     win: 'win.mp3',          // jingle de victoire
@@ -135,6 +136,11 @@ const SoundManager = (() => {
         break;
       case 'buzzer': // buzz court du face-à-face
         tone(440, 0, 0.25, { type: 'square', gain: 0.3 });
+        break;
+      case 'timesup': // fin du temps : trois notes descendantes
+        tone(392, 0, 0.2, { type: 'triangle', gain: 0.32 });
+        tone(311, 0.18, 0.2, { type: 'triangle', gain: 0.32 });
+        tone(220, 0.36, 0.55, { type: 'sawtooth', gain: 0.3 });
         break;
       case 'applause':
         for (let i = 0; i < 12; i++) noiseBurst(i * 0.06, 0.12, 0.18);
