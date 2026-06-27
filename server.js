@@ -626,12 +626,24 @@ const heartbeat = setInterval(() => {
 }, 30000);
 wss.on('close', () => clearInterval(heartbeat));
 
+/** IP du client en tenant compte d'un reverse proxy (hébergement en ligne).
+ *  Render/Railway/Fly mettent l'IP réelle dans X-Forwarded-For ; sans cela, tous les
+ *  clients partageraient l'IP du proxy → un seul mauvais code verrouillerait tout le monde
+ *  (l'anti-brute-force est par IP). En LAN (pas de proxy), on garde l'IP de la socket.
+ *  NB : X-Forwarded-For est falsifiable ; ce keyage évite surtout le verrouillage global.
+ *  En exposition publique, la vraie protection reste un REGIE_CODE long. */
+function clientIp(req) {
+  const xff = (req.headers && req.headers['x-forwarded-for']) || '';
+  const first = xff.split(',')[0].trim();
+  return first || (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
 wss.on('connection', (ws, req) => {
   ws.isAlive = true;
   ws.on('pong', () => {
     ws.isAlive = true;
   });
-  ws._ip = (req.socket && req.socket.remoteAddress) || 'unknown';
+  ws._ip = clientIp(req);
   // Authentification de contrôle : code passé en query (?code=...) à la connexion.
   // Le rôle (?role=regie|animateur) sert à appliquer le mode lecture seule animateur.
   let code = '';

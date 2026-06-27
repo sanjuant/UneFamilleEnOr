@@ -10,7 +10,7 @@ let cur = null; // dernier état reçu (utilisé par le décompte du chrono)
 // ---- Connexion WebSocket (avec reconnexion automatique) ----
 let ws;
 function connect() {
-  ws = new WebSocket(`ws://${location.host}`);
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
   ws.onopen = () => connDot.classList.add('ok');
   ws.onclose = () => {
     connDot.classList.remove('ok');

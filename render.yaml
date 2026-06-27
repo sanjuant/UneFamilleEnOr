@@ -1,0 +1,28 @@
+# Déploiement en ligne sur Render (https://render.com).
+# Service web Node persistant : WebSocket supporté, UNE SEULE instance
+# (l'état du jeu est en mémoire — pas de scaling horizontal).
+#
+# Étapes :
+#   1) Pousser ce dépôt sur GitHub.
+#   2) Render → New → Blueprint → choisir le dépôt (ce fichier est détecté).
+#   3) Définir REGIE_CODE dans le dashboard (code d'accès régie/animateur).
+#      Choisis un code SOLIDE : le jeu sera public sur internet.
+#   4) Après le 1er déploiement, copier l'URL publique
+#      (https://<nom>.onrender.com) dans la variable LAN_HOST pour que
+#      le QR / l'adresse des buzzers pointent au bon endroit.
+services:
+  - type: web
+    name: une-famille-en-or
+    runtime: node
+    plan: free            # gratuit : se met en veille après ~15 min d'inactivité
+    region: frankfurt     # EU (latence plus faible en France)
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: REGIE_CODE
+        sync: false        # à définir dans le dashboard (secret)
+      # - key: ANIMATEUR_CODE   # (optionnel) code distinct pour la tablette animateur
+      #   sync: false
+      # - key: LAN_HOST         # https://<nom>.onrender.com  (QR/URL des buzzers)
+      #   sync: false

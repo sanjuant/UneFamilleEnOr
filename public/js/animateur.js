@@ -17,7 +17,7 @@ const $ = (id) => document.getElementById(id);
 const connDot = $('conn');
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/?role=animateur&code=${encodeURIComponent(ctrlCode)}`);
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/?role=animateur&code=${encodeURIComponent(ctrlCode)}`);
   ws.onopen = () => connDot.classList.add('ok');
   ws.onclose = () => {
     connDot.classList.remove('ok');

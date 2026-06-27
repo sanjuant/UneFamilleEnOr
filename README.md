@@ -100,6 +100,44 @@ REGIE_CODE=regie123 ANIMATEUR_CODE=anim456 npm start
 ```
 Le rôle est alors déduit du **code saisi** (et non du paramètre d'URL) : le porteur du seul code animateur ne peut jamais obtenir les droits régie, et le mode « vision seule » devient infranchissable depuis sa tablette.
 
+## Héberger en ligne (joueurs à distance)
+
+Si tout le monde n'est **pas sur le même réseau**, on met le jeu en ligne : un seul déploiement, on partage l'URL, et chacun se connecte de n'importe où (la régie comprise).
+
+> ⚠️ **Pas Vercel / Netlify.** Ce sont des plateformes *serverless* (sans serveur WebSocket persistant ni état partagé en mémoire) : l'appli ne peut pas y tourner sans réécriture lourde. Il faut un hébergeur qui exécute **un process Node permanent en une seule instance**.
+
+### Recommandé : Render (gratuit pour commencer)
+
+1. Pousser ce dépôt sur **GitHub**.
+2. Sur [render.com](https://render.com) : **New → Blueprint** → choisir le dépôt (le fichier [`render.yaml`](render.yaml) est détecté). *(Sinon : New → Web Service, build `npm install`, start `npm start`.)*
+3. Définir la variable **`REGIE_CODE`** dans le dashboard — choisis un **code solide** (le jeu est public).
+4. Après le 1er déploiement, copier l'URL `https://<nom>.onrender.com` dans la variable **`LAN_HOST`** : le **QR / l'adresse des buzzers** pointeront alors vers la bonne URL.
+
+Puis chacun ouvre, depuis n'importe quel appareil avec internet :
+| Rôle | Adresse |
+|---|---|
+| Régie | `https://<nom>.onrender.com/regie` |
+| Écran de jeu | `https://<nom>.onrender.com/` |
+| Animateur | `https://<nom>.onrender.com/animateur` |
+| Buzzers | `https://<nom>.onrender.com/buzzer` |
+
+**Variables d'environnement utiles** : `REGIE_CODE` (obligatoire en public), `ANIMATEUR_CODE` (optionnel, code animateur distinct), `LAN_HOST` (URL publique pour le QR), `ANIMATOR_CONTROL=1` (animateur pilote par défaut). `PORT` est géré automatiquement par l'hébergeur.
+
+**À savoir**
+- **Une seule instance** : l'état du jeu est en mémoire, donc pas d'autoscaling (1 instance = tout le monde voit la même partie).
+- **Offre gratuite = mise en veille** après ~15 min sans activité : 1er accès lent (~30 s) et **état réinitialisé** (il suffit de recharger le JSON). Pour éviter ça, passer en offre payante (~7 $/mois).
+- **Sécurité** : le jeu devient public ; seul le code protège régie/animateur (anti-brute-force par IP réelle activé). Mets un code long, pas « 1234 ».
+- Équivalents : **Railway**, **Fly.io** (même principe : 1 instance, WebSocket, `npm start`).
+
+### Alternative sans héberger : tunnel
+
+Pour un accès ponctuel sans déployer, lance le serveur **sur ton PC** (avec internet) et expose-le via un **tunnel** (Cloudflare Tunnel ou ngrok), qui fournit une URL HTTPS publique :
+```bash
+npm start
+# dans un autre terminal :
+npx cloudflared tunnel --url http://localhost:3000
+```
+
 ## Vue Animateur (scène)
 
 L'animateur ouvre **`http://<IP-du-PC>:3000/animateur`** sur son téléphone/tablette. Il peut :

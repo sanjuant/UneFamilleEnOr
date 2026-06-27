@@ -9,7 +9,7 @@ let ctrlCode = localStorage.getItem('ctrlCode') || '';
 const connEl = document.getElementById('conn');
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}/?role=regie&code=${encodeURIComponent(ctrlCode)}`);
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/?role=regie&code=${encodeURIComponent(ctrlCode)}`);
   ws.onopen = () => {
     connEl.textContent = '● en ligne';
     connEl.classList.add('ok');

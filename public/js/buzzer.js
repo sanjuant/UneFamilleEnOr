@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 const connDot = $('conn');
 
 function connect() {
-  ws = new WebSocket(`ws://${location.host}`);
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
   ws.onopen = () => {
     connDot.classList.add('ok');
     helloIfReady();
