@@ -98,6 +98,8 @@ L'animateur ouvre **`http://<IP-du-PC>:3000/animateur`** sur son téléphone/tab
 - basculer en **mode anti-spoiler** (🙈) pour garder les réponses masquées sur son propre écran et ne pas se gâcher la surprise — les réponses déjà révélées au public restent visibles ;
 - donner les **fautes** (✖) et la **cagnotte**.
 
+**Pendant la manche finale**, l'animateur voit en plus : le **chrono en direct**, et les **réponses saisies des finalistes** — celles du finaliste 1 restent visibles pour repérer les **doublons** du finaliste 2 (signalés par ⚠). Quand le chrono atteint 0, un **son** retentit sur l'écran de jeu et le chrono disparaît.
+
 C'est une vue compagnon synchronisée : tout ce qu'il fait apparaît sur l'écran de jeu, en complément (ou en remplacement ponctuel) de la régie.
 
 ## Format du fichier de questions

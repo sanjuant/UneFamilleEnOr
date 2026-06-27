@@ -245,6 +245,76 @@ body.anim {
 }
 
 /* Manche finale (lecture) */
+.final-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.anim-timer {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--gold-1);
+}
+.anim-timer.low {
+  color: var(--red);
+  animation: ft-blink 1s steps(2) infinite;
+}
+@keyframes ft-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+.fq-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.fcell-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.fcellr {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-0);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+.fcellr.active {
+  border-color: var(--gold-2);
+  box-shadow: 0 0 0 1px var(--gold-3);
+}
+.fcellr.dup {
+  border-color: var(--red);
+}
+.fcellr-tag {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fcellr-ans {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.fcellr.dup .fcellr-ans {
+  color: var(--red);
+}
+.fcellr-pts {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--gold-1);
+}
 .final-read {
   display: flex;
   flex-direction: column;

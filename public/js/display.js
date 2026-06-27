@@ -225,31 +225,20 @@ function renderFinal(fs, s) {
   updateFinalTimerBig(fs);
 }
 
-let finalTimerWasRunning = false;
-let finalTimerHitZero = false;
-
 function updateFinalTimerBig(fs) {
   const el = document.getElementById('finalTimerBig');
   if (!el) return;
   const t = fs && fs.timer;
+  // À l'expiration, le serveur arrête le chrono (running=false, remaining=0) et
+  // diffuse le son de fin : le chrono disparaît alors ici.
   if (!t || (!t.running && !t.remaining)) {
     el.style.display = 'none';
-    finalTimerWasRunning = false;
-    finalTimerHitZero = false;
     return;
   }
   const rem = t.running ? Math.max(0, Math.round((t.endsAt - Date.now()) / 1000)) : t.remaining;
   el.style.display = '';
   el.textContent = `⏱ ${String(rem).padStart(2, '0')}`;
   el.classList.toggle('low', t.running && rem <= 5);
-
-  // Buzzer une seule fois quand le chrono atteint zéro (seulement en vue finale)
-  if (t.running && rem === 0 && !finalTimerHitZero && cur && cur.view === 'final') {
-    SoundManager.play('buzzer');
-    finalTimerHitZero = true;
-  }
-  if (rem > 0) finalTimerHitZero = false;
-  finalTimerWasRunning = t.running;
 }
 
 // Décompte fluide du chrono (l'autorité reste le serveur via endsAt)

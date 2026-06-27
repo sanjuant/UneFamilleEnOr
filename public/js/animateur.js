@@ -218,25 +218,47 @@ function renderBoard() {
   });
 }
 
+const normFinal = (s) =>
+  (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
 function renderFinal() {
   const fs = state.finalState;
   const show = state.view === 'final' && fs;
   $('finalPanel').hidden = !show;
-  if (!show) return;
+  if (!show) {
+    updateAnimTimer();
+    return;
+  }
   const names = fs.finalistNames || ['', ''];
-  const who = fs.activePlayer === 0 ? names[0] || 'Finaliste 1' : names[1] || 'Finaliste 2';
+  const n0 = names[0] || 'Finaliste 1';
+  const n1 = names[1] || 'Finaliste 2';
+  const who = fs.activePlayer === 0 ? n0 : n1;
   const reached = fs.total >= fs.target;
 
-  // Questions de la finale + réponses attendues (masquées en mode anti-spoiler).
-  const questions = (fs.questions || [])
+  // Par question : la réponse SAISIE de chaque finaliste. Le finaliste 1 reste
+  // visible pour que l'animateur repère les doublons du finaliste 2.
+  const rows = (fs.questions || [])
     .map((q, i) => {
-      const ans = (q.answers || [])
-        .map((a) => `<li>${hideAnswers ? '• • •' : escapeHtml(a.text)} <b>${hideAnswers ? '•' : a.points}</b></li>`)
-        .join('');
+      const c0 = fs.cells[i][0];
+      const c1 = fs.cells[i][1];
+      const dup = c1.answer && normFinal(c1.answer) === normFinal(c0.answer);
+      const hint = hideAnswers
+        ? ''
+        : (q.answers || []).map((a) => `${escapeHtml(a.text)} (${a.points})`).join(' · ');
+      const cell = (c, name, active) => `
+        <div class="fcellr ${active ? 'active' : ''} ${dup && c === c1 ? 'dup' : ''}">
+          <span class="fcellr-tag">${escapeHtml(name)}</span>
+          <span class="fcellr-ans">${c.answer ? escapeHtml(c.answer) : '—'}${dup && c === c1 ? ' ⚠' : ''}</span>
+          <span class="fcellr-pts">${c.points || ''}</span>
+        </div>`;
       return `
       <div class="fq-read">
         <div class="fq-read__q">Q${i + 1}. ${escapeHtml(q.question)}</div>
-        <ul class="fq-read__a">${ans}</ul>
+        ${hint ? `<div class="fq-hint">💡 ${hint}</div>` : ''}
+        <div class="fcell-row">
+          ${cell(c0, n0, fs.activePlayer === 0)}
+          ${cell(c1, n1, fs.activePlayer === 1)}
+        </div>
       </div>`;
     })
     .join('');
@@ -244,9 +266,30 @@ function renderFinal() {
   $('finalRead').innerHTML = `
     <div class="fr-row"><span>Au tour de</span><b>${escapeHtml(who)}</b></div>
     <div class="fr-row"><span>Total</span><b class="${reached ? 'ok' : ''}">${fs.total} / ${fs.target}</b></div>
-    <p class="fr-note">La manche finale se pilote depuis la régie — vue d'aide ci-dessous.</p>
-    ${questions}`;
+    <p class="fr-note">Réponses saisies des finalistes. ⚠ = doublon (identique au finaliste 1).</p>
+    ${rows}`;
+
+  updateAnimTimer();
 }
+
+// Chrono de la finale : décompte fluide, disparaît quand le serveur l'arrête (fin du temps).
+function updateAnimTimer() {
+  const el = $('animFinalTimer');
+  if (!el) return;
+  const fs = state && state.finalState;
+  const t = fs && fs.timer;
+  if (!t || !state || state.view !== 'final' || (!t.running && !t.remaining)) {
+    el.style.display = 'none';
+    return;
+  }
+  const rem = t.running ? Math.max(0, Math.round((t.endsAt - Date.now()) / 1000)) : t.remaining;
+  el.style.display = '';
+  el.textContent = `⏱ ${String(rem).padStart(2, '0')}`;
+  el.classList.toggle('low', t.running && rem <= 5);
+}
+setInterval(() => {
+  if (state) updateAnimTimer();
+}, 250);
 
 function renderRounds() {
   const wrap = $('roundsList');

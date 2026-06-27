@@ -418,12 +418,9 @@ const handlers = {
     const t = fs.timer;
     const canResume = !t.running && t.remaining > 0 && t.player === fs.activePlayer;
     const seconds = Number(p.seconds) || (canResume ? t.remaining : fs.timers[fs.activePlayer] || 20);
-    fs.timer = {
-      running: true,
-      endsAt: Date.now() + seconds * 1000,
-      remaining: seconds,
-      player: fs.activePlayer,
-    };
+    const endsAt = Date.now() + seconds * 1000;
+    fs.timer = { running: true, endsAt, remaining: seconds, player: fs.activePlayer };
+    scheduleFinalTimerExpiry(endsAt, seconds * 1000 + 50);
   },
 
   pauseFinalTimer() {
@@ -431,12 +428,14 @@ const handlers = {
     if (!fs || !fs.timer.running) return;
     fs.timer.remaining = Math.max(0, Math.round((fs.timer.endsAt - Date.now()) / 1000));
     fs.timer.running = false;
+    clearFinalTimerExpiry();
   },
 
   resetFinalTimer() {
     const fs = state.finalState;
     if (!fs) return;
     fs.timer = { running: false, endsAt: 0, remaining: 0, player: fs.activePlayer };
+    clearFinalTimerExpiry();
   },
 
   // ---- Buzzers (face-à-face) ----
@@ -476,6 +475,29 @@ const handlers = {
 // ---------------------------------------------------------------------------
 
 const lastSoundAt = {}; // anti-rebond des événements sonores (par nom)
+
+// Expiration du minuteur de la finale : à 0, on joue un son et on arrête le chrono.
+let finalTimerHandle = null;
+function clearFinalTimerExpiry() {
+  if (finalTimerHandle) {
+    clearTimeout(finalTimerHandle);
+    finalTimerHandle = null;
+  }
+}
+function scheduleFinalTimerExpiry(endsAt, ms) {
+  clearFinalTimerExpiry();
+  finalTimerHandle = setTimeout(() => {
+    finalTimerHandle = null;
+    const fs = state.finalState;
+    // On n'expire que si CE minuteur tourne toujours (pas pausé/réinitialisé/relancé).
+    if (fs && fs.timer.running && fs.timer.endsAt === endsAt) {
+      fs.timer.running = false;
+      fs.timer.remaining = 0;
+      if (state.view === 'final') broadcast({ type: 'sound', name: 'buzzer' }); // fin du temps
+      broadcastState();
+    }
+  }, ms);
+}
 
 function broadcast(obj) {
   const msg = JSON.stringify(obj);
