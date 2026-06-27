@@ -16,6 +16,7 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 📖 **Règles intégrées** : page `/regles` (avec déroulé détaillé de la manche finale) accessible depuis la régie.
 - 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main). **QR code** de connexion intégré.
 - ⚡ **Régie fluide** : lancement d'une manche en 1 clic (question + buzzers armés), **raccourcis clavier**, barre d'état permanente, équipe active déduite du buzz.
+- 📱 **Vue Animateur** : page `/animateur` (smartphone/tablette) pour l'animateur sur scène — voir la question de la prochaine manche, la lancer, révéler les réponses (ou les **garder masquées** pour ne pas se spoiler).
 
 ### La manche finale, pas à pas
 
@@ -37,6 +38,7 @@ Puis ouvrez :
 - **Régie** : <http://localhost:3000/regie>
 - **Règles** : <http://localhost:3000/regles>
 - **Buzzer** (smartphone) : <http://localhost:3000/buzzer>
+- **Animateur** (smartphone/tablette) : <http://localhost:3000/animateur>
 
 ### Sur plusieurs appareils (réseau local)
 
@@ -69,6 +71,16 @@ remplacez `localhost` par l'**adresse IP de ce PC**. Exemple : `http://192.168.1
 - **Barre d'état permanente** en haut : vue, manche, question, équipe qui a la main, cagnotte, fautes, état des buzzers.
 - **Raccourcis clavier** (bouton **« ⌨ Raccourcis »** ou touche `?`) :
   `1`-`9` révéler/masquer une réponse · `X` faute · `C` effacer les fautes · `R` tout révéler · `←`/`→` cagnotte à l'équipe gauche/droite · `B` armer les buzzers · `N` manche suivante · `L` logo.
+
+## Vue Animateur (scène)
+
+L'animateur ouvre **`http://<IP-du-PC>:3000/animateur`** sur son téléphone/tablette. Il peut :
+- voir la **question de la prochaine manche** et la **lancer** (▶) ;
+- **révéler les réponses** une à une (elles s'affichent sur l'écran de jeu) ;
+- basculer en **mode anti-spoiler** (🙈) pour garder les réponses masquées sur son propre écran et ne pas se gâcher la surprise — les réponses déjà révélées au public restent visibles ;
+- donner les **fautes** (✖) et la **cagnotte**.
+
+C'est une vue compagnon synchronisée : tout ce qu'il fait apparaît sur l'écran de jeu, en complément (ou en remplacement ponctuel) de la régie.
 
 ## Format du fichier de questions
 

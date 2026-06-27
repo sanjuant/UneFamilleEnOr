@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#050b22" />
+  <title>Animateur — Une Famille en Or</title>
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/animateur.css" />
+</head>
+<body class="anim">
+  <div class="studio-bg"></div>
+  <div class="conn" id="conn" title="Connexion"></div>
+
+  <header class="anim-head">
+    <div class="anim-title gold-text">ANIMATEUR</div>
+    <div class="anim-scores" id="animScores"></div>
+  </header>
+
+  <div class="anim-phase" id="animPhase">En attente…</div>
+
+  <button class="spoiler-toggle" id="spoilerBtn">👁 Réponses visibles</button>
+
+  <main class="anim-main">
+    <!-- Plateau de la manche en cours -->
+    <section class="panel" id="boardPanel" hidden>
+      <div class="panel__head">
+        <span class="panel__tag" id="boardTag">Manche</span>
+        <div class="strikes-mini">
+          <button class="mini-btn x" id="strikeBtn">✖ Faute</button>
+          <span class="strikes-num" id="strikeNum">0/3</span>
+          <button class="mini-btn" id="strikeClearBtn">Effacer</button>
+        </div>
+      </div>
+      <p class="panel__q" id="boardQuestion"></p>
+      <div class="ans-list" id="ansList"></div>
+      <div class="panel__tools">
+        <button class="mini-btn" id="revealAllBtn">👁 Tout révéler</button>
+      </div>
+      <div class="award" id="awardRow">
+        <span>Cagnotte <b id="potVal">0</b> →</span>
+        <button class="award-btn" data-team="0" id="awardA">—</button>
+        <button class="award-btn" data-team="1" id="awardB">—</button>
+      </div>
+    </section>
+
+    <!-- Manche finale (lecture) -->
+    <section class="panel" id="finalPanel" hidden>
+      <span class="panel__tag">⭐ Manche finale</span>
+      <div class="final-read" id="finalRead"></div>
+    </section>
+
+    <!-- Manches : aperçu + lancement -->
+    <section class="panel" id="roundsPanel">
+      <div class="panel__head">
+        <span class="panel__tag">📋 Manches</span>
+        <button class="launch-next" id="launchNextBtn">▶ Prochaine manche</button>
+      </div>
+      <div class="rounds" id="roundsList"></div>
+    </section>
+  </main>
+
+  <script src="/js/animateur.js"></script>
+</body>
+</html>

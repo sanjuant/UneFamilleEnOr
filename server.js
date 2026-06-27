@@ -74,6 +74,7 @@ app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'display
 app.get('/regie', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'regie.html')));
 app.get('/regles', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'regles.html')));
 app.get('/buzzer', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'buzzer.html')));
+app.get('/animateur', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'animateur.html')));
 
 // QR code (SVG) pointant vers la page buzzer sur le réseau local.
 app.get('/qr/buzzer', async (_req, res) => {
@@ -442,6 +443,8 @@ const handlers = {
 // WebSocket
 // ---------------------------------------------------------------------------
 
+const lastSoundAt = {}; // anti-rebond des événements sonores (par nom)
+
 function broadcast(obj) {
   const msg = JSON.stringify(obj);
   wss.clients.forEach((client) => {
@@ -500,6 +503,13 @@ wss.on('connection', (ws) => {
       }
     } else if (msg.type === 'sound') {
       // Événement sonore transitoire : on relaie à tous les écrans.
+      // Anti-rebond : ignore un même son redéclenché < 150 ms après (double-clic,
+      // ou régie + animateur qui agissent en parallèle).
+      if (!msg.stop) {
+        const now = Date.now();
+        if (lastSoundAt[msg.name] && now - lastSoundAt[msg.name] < 150) return;
+        lastSoundAt[msg.name] = now;
+      }
       broadcast({ type: 'sound', name: msg.name, stop: !!msg.stop });
     } else if (msg.type === 'hello' && msg.role === 'buzzer') {
       // Un smartphone s'annonce comme buzzer d'une équipe.
@@ -533,6 +543,7 @@ server.listen(PORT, () => {
   console.log('\n  🟡  UNE FAMILLE EN OR  🟡\n');
   console.log(`  Écran de jeu : http://localhost:${PORT}/`);
   console.log(`  Régie        : http://localhost:${PORT}/regie`);
+  console.log(`  Animateur    : http://localhost:${PORT}/animateur`);
   console.log(`  Règles       : http://localhost:${PORT}/regles`);
   console.log(`  Buzzer       : http://localhost:${PORT}/buzzer\n`);
   console.log(`  Réseau (téléphones) : ${currentLanUrl()}/buzzer`);
