@@ -19,12 +19,13 @@ function connect() {
   ws.onopen = () => connDot.classList.add('ok');
   ws.onclose = () => {
     connDot.classList.remove('ok');
+    authed = false;
     setTimeout(connect, 1000);
   };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'auth') {
-      handleAuth(msg.ok);
+      handleAuth(msg.ok, msg.locked);
     } else if (msg.type === 'state') {
       state = msg.state;
       render();
@@ -44,20 +45,40 @@ function sound(name) {
 }
 
 // ---- Portail de code d'accès ----
-function handleAuth(ok) {
+let manualAttempt = false;
+function showAuthErr(text) {
+  const err = $('authErr');
+  if (err) {
+    err.textContent = text;
+    err.hidden = !text;
+  }
+}
+function handleAuth(ok, locked) {
   authed = ok;
   const gate = $('authGate');
   if (gate) gate.hidden = ok;
   if (!ok) {
-    const err = $('authErr');
-    if (err) err.hidden = !ctrlCode;
+    if (locked) showAuthErr('Trop de tentatives. Réessayez dans une minute.');
+    else if (manualAttempt) showAuthErr('Code incorrect.');
+    else if (ctrlCode) showAuthErr('Le code a peut-être changé (serveur redémarré). Entrez le nouveau code affiché dans le terminal.');
+    else showAuthErr('');
     const inp = $('authInput');
     if (inp) inp.focus();
+  } else {
+    showAuthErr('');
   }
+  manualAttempt = false;
 }
 function submitCode() {
-  ctrlCode = ($('authInput').value || '').trim();
+  const v = ($('authInput').value || '').trim();
+  if (!v) {
+    showAuthErr('Entrez le code.');
+    $('authInput').focus();
+    return;
+  }
+  ctrlCode = v;
   localStorage.setItem('ctrlCode', ctrlCode);
+  manualAttempt = true;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'auth', code: ctrlCode }));
   else connect();
 }
@@ -65,6 +86,7 @@ $('authSubmit').addEventListener('click', submitCode);
 $('authInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') submitCode();
 });
+$('authInput').focus();
 
 // ---- Anti-spoiler ----
 $('spoilerBtn').addEventListener('click', () => {

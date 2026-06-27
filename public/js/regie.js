@@ -17,12 +17,13 @@ function connect() {
   ws.onclose = () => {
     connEl.textContent = '● hors ligne';
     connEl.classList.remove('ok');
+    authed = false; // on ne peut plus commander tant qu'on n'est pas reconnecté+ré-authentifié
     setTimeout(connect, 1000);
   };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'auth') {
-      handleAuth(msg.ok);
+      handleAuth(msg.ok, msg.locked);
     } else if (msg.type === 'state') {
       state = msg.state;
       render();
@@ -44,21 +45,41 @@ function sound(name, stop = false) {
 }
 
 // ---- Portail de code d'accès ----
-function handleAuth(ok) {
+let manualAttempt = false; // un code vient-il d'être saisi à la main ?
+function showAuthErr(text) {
+  const err = document.getElementById('authErr');
+  if (err) {
+    err.textContent = text;
+    err.hidden = !text;
+  }
+}
+function handleAuth(ok, locked) {
   authed = ok;
   const gate = document.getElementById('authGate');
   if (gate) gate.hidden = ok;
   if (!ok) {
-    const err = document.getElementById('authErr');
-    if (err) err.hidden = !ctrlCode; // affiche l'erreur seulement si un code avait été tenté
+    if (locked) showAuthErr('Trop de tentatives. Réessayez dans une minute.');
+    else if (manualAttempt) showAuthErr('Code incorrect.');
+    else if (ctrlCode) showAuthErr('Le code a peut-être changé (serveur redémarré). Entrez le nouveau code affiché dans le terminal.');
+    else showAuthErr('');
     const inp = document.getElementById('authInput');
     if (inp) inp.focus();
+  } else {
+    showAuthErr('');
   }
+  manualAttempt = false;
 }
 function submitCode() {
   const inp = document.getElementById('authInput');
-  ctrlCode = (inp.value || '').trim();
+  const v = (inp.value || '').trim();
+  if (!v) {
+    showAuthErr('Entrez le code.');
+    inp.focus();
+    return;
+  }
+  ctrlCode = v;
   localStorage.setItem('ctrlCode', ctrlCode);
+  manualAttempt = true;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'auth', code: ctrlCode }));
   else connect();
 }
@@ -66,6 +87,7 @@ document.getElementById('authSubmit').addEventListener('click', submitCode);
 document.getElementById('authInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') submitCode();
 });
+document.getElementById('authInput').focus();
 
 // Débloque l'audio dès la première interaction de l'animateur.
 document.addEventListener('click', () => SoundManager.unlock(), { once: true });

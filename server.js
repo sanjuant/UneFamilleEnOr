@@ -54,8 +54,36 @@ const ENV_LAN = process.env.LAN_HOST
 let chosenLanUrl = null; // IP choisie par l'opérateur dans la régie
 
 // Code d'accès des surfaces de CONTRÔLE (régie + animateur).
-// Défini par la variable d'environnement REGIE_CODE, sinon généré (4 chiffres).
-const ACCESS_CODE = (process.env.REGIE_CODE || String(Math.floor(1000 + Math.random() * 9000))).toString();
+// Défini par REGIE_CODE, sinon généré (6 chiffres aléatoires sûrs).
+const crypto = require('crypto');
+const ACCESS_CODE = (process.env.REGIE_CODE || String(crypto.randomInt(100000, 1000000))).toString();
+
+// Anti-brute-force : limite les tentatives de code échouées par IP.
+const authFails = new Map(); // ip -> { count, lockedUntil }
+const AUTH_MAX = 8; // échecs avant verrouillage
+const AUTH_LOCK_MS = 60000; // durée du verrouillage
+
+/** Valide un code pour une IP, avec verrouillage progressif. Renvoie {ok, locked}. */
+function validateCode(ip, code) {
+  const rec = authFails.get(ip);
+  if (rec && rec.lockedUntil > Date.now()) return { ok: false, locked: true };
+  if (!code) return { ok: false }; // pas de code = spectateur, pas une tentative
+  const ok = code === ACCESS_CODE;
+  if (ok) {
+    authFails.delete(ip);
+  } else {
+    const r = rec || { count: 0, lockedUntil: 0 };
+    r.count += 1;
+    if (r.count >= AUTH_MAX) {
+      r.count = 0;
+      r.lockedUntil = Date.now() + AUTH_LOCK_MS;
+      authFails.set(ip, r);
+      return { ok: false, locked: true };
+    }
+    authFails.set(ip, r);
+  }
+  return { ok };
+}
 
 /** URL réseau effective (choix opérateur > env > meilleure candidate). */
 function currentLanUrl() {
@@ -456,11 +484,57 @@ function broadcast(obj) {
   });
 }
 
+/**
+ * État "public" pour les clients NON authentifiés (écran de jeu, buzzers, curieux) :
+ * les réponses non révélées sont retirées pour ne pas pouvoir lire les bonnes
+ * réponses à l'avance. Les clients de contrôle authentifiés reçoivent l'état complet.
+ */
+function publicState() {
+  const s = JSON.parse(JSON.stringify(state));
+  // Définitions chargées : on retire toutes les réponses (le client public n'en a pas besoin).
+  s.rounds = (s.rounds || []).map((r) => ({ multiplier: r.multiplier, question: r.question, answers: [] }));
+  if (s.final) {
+    s.final = {
+      ...s.final,
+      questions: (s.final.questions || []).map((q) => ({ question: q.question, answers: [] })),
+    };
+  }
+  // Plateau en cours : réponses non révélées masquées.
+  if (s.board) {
+    s.board.answers = s.board.answers.map((a) =>
+      a.revealed ? a : { text: '', points: 0, revealed: false }
+    );
+  }
+  // Manche finale : réponses attendues retirées, cellules non révélées masquées.
+  if (s.finalState) {
+    s.finalState.questions = (s.finalState.questions || []).map((q) => ({ question: q.question, answers: [] }));
+    s.finalState.cells = (s.finalState.cells || []).map((pair) =>
+      pair.map((c) => (c.revealed ? c : { answer: '', points: 0, revealed: false }))
+    );
+  }
+  return s;
+}
+
+/** Envoie l'état adapté au niveau d'accès du socket (complet si authentifié). */
+function sendStateTo(ws) {
+  ws.send(JSON.stringify({ type: 'state', state: ws._authed ? state : publicState() }));
+}
+
 function broadcastState() {
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();
-  broadcast({ type: 'state', state });
+  let pub = null;
+  const full = JSON.stringify({ type: 'state', state });
+  wss.clients.forEach((client) => {
+    if (client.readyState !== 1) return;
+    if (client._authed) {
+      client.send(full);
+    } else {
+      if (!pub) pub = JSON.stringify({ type: 'state', state: publicState() });
+      client.send(pub);
+    }
+  });
 }
 
 // Heartbeat : détecte et ferme les connexions mortes (téléphones déconnectés).
@@ -482,18 +556,21 @@ wss.on('connection', (ws, req) => {
   ws.on('pong', () => {
     ws.isAlive = true;
   });
+  ws._ip = (req.socket && req.socket.remoteAddress) || 'unknown';
   // Authentification de contrôle : code passé en query (?code=...) à la connexion.
+  let code = '';
   try {
-    const u = new URL(req.url, 'http://localhost');
-    ws._authed = u.searchParams.get('code') === ACCESS_CODE;
+    code = new URL(req.url, 'http://localhost').searchParams.get('code') || '';
   } catch {
-    ws._authed = false;
+    code = '';
   }
+  const res = validateCode(ws._ip, code);
+  ws._authed = res.ok;
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();
-  ws.send(JSON.stringify({ type: 'state', state }));
-  ws.send(JSON.stringify({ type: 'auth', ok: ws._authed }));
+  sendStateTo(ws);
+  ws.send(JSON.stringify({ type: 'auth', ok: ws._authed, locked: !!res.locked }));
 
   ws.on('message', (raw) => {
     let msg;
@@ -505,8 +582,12 @@ wss.on('connection', (ws, req) => {
 
     // Authentification a posteriori (saisie du code dans la régie/animateur).
     if (msg.type === 'auth') {
-      ws._authed = (msg.code || '').toString() === ACCESS_CODE;
-      ws.send(JSON.stringify({ type: 'auth', ok: ws._authed }));
+      const wasAuthed = ws._authed;
+      const res = validateCode(ws._ip, (msg.code || '').toString());
+      ws._authed = res.ok;
+      ws.send(JSON.stringify({ type: 'auth', ok: ws._authed, locked: !!res.locked }));
+      // Si on vient d'obtenir l'accès, on pousse l'état complet (réponses incluses).
+      if (ws._authed && !wasAuthed) sendStateTo(ws);
       return;
     }
 
@@ -557,8 +638,7 @@ wss.on('connection', (ws, req) => {
 
   ws.on('close', () => {
     if (ws._buzzerTeam === 0 || ws._buzzerTeam === 1) {
-      recomputeBuzzerConnected();
-      broadcast({ type: 'state', state });
+      broadcastState(); // recompte les buzzers + diffuse (état expurgé pour les non-authentifiés)
     }
   });
 });

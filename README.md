@@ -85,6 +85,9 @@ La **régie** (`/regie`) et l'**animateur** (`/animateur`) sont protégés par u
   ```
 - Sur l'appareil de régie/animation, on saisit le code une fois (il est mémorisé).
 
+- **Anti-triche** : les réponses non révélées ne sont **pas** envoyées aux écrans non authentifiés (écran de jeu, buzzers, curieux) — impossible de lire les bonnes réponses à l'avance, même en inspectant la page.
+- **Anti-brute-force** : après quelques codes erronés depuis un même appareil, les tentatives sont **verrouillées** une minute.
+
 > C'est une protection légère adaptée à une soirée en réseau local privé (anti-curieux / anti-blague), pas une sécurité de niveau Internet.
 
 ## Vue Animateur (scène)
