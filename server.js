@@ -12,11 +12,13 @@ const http = require('http');
 const path = require('path');
 const os = require('os');
 const QRCode = require('qrcode');
-const { WebSocketServer } = require('ws');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+// Socket.IO : temps réel avec repli automatique en HTTP long-polling quand le
+// WebSocket est bloqué (proxys/pare-feux d'entreprise). Même origine → pas de CORS.
+const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 // Adaptateurs virtuels / VPN à déprioriser pour le choix de l'IP locale.
@@ -208,8 +210,9 @@ function endFaceOffIfArmed() {
 /** Compte les buzzers connectés par équipe (mis à jour avant chaque diffusion). */
 function recomputeBuzzerConnected() {
   const counts = [0, 0];
-  wss.clients.forEach((c) => {
-    if (c._buzzerTeam === 0 || c._buzzerTeam === 1) counts[c._buzzerTeam]++;
+  io.sockets.sockets.forEach((s) => {
+    const t = s.data.buzzerTeam;
+    if (t === 0 || t === 1) counts[t]++;
   });
   state.buzzer.connected = counts;
 }
@@ -544,17 +547,15 @@ function scheduleFinalTimerExpiry(endsAt, ms) {
     if (fs && fs.timer.running && fs.timer.endsAt === endsAt) {
       fs.timer.running = false;
       fs.timer.remaining = 0;
-      if (state.view === 'final') broadcast({ type: 'sound', name: 'timesup' }); // fin du temps
+      if (state.view === 'final') emitSound('timesup'); // fin du temps
       broadcastState();
     }
   }, ms);
 }
 
-function broadcast(obj) {
-  const msg = JSON.stringify(obj);
-  wss.clients.forEach((client) => {
-    if (client.readyState === 1) client.send(msg);
-  });
+/** Événement sonore transitoire diffusé à tous les écrans. */
+function emitSound(name, stop) {
+  io.emit('sound', { name, stop: !!stop });
 }
 
 /**
@@ -589,9 +590,9 @@ function publicState() {
 }
 
 /** Envoie l'état adapté au niveau d'accès du socket (complet si authentifié). */
-function sendStateTo(ws) {
+function sendStateTo(socket) {
   state.animatorControl = animatorControl;
-  ws.send(JSON.stringify({ type: 'state', state: ws._authed ? state : publicState() }));
+  socket.emit('state', socket.data.authed ? state : publicState());
 }
 
 function broadcastState() {
@@ -600,146 +601,122 @@ function broadcastState() {
   recomputeBuzzerConnected();
   refreshLan();
   let pub = null;
-  const full = JSON.stringify({ type: 'state', state });
-  wss.clients.forEach((client) => {
-    if (client.readyState !== 1) return;
-    if (client._authed) {
-      client.send(full);
+  io.sockets.sockets.forEach((socket) => {
+    if (socket.data.authed) {
+      socket.emit('state', state);
     } else {
-      if (!pub) pub = JSON.stringify({ type: 'state', state: publicState() });
-      client.send(pub);
+      if (!pub) pub = publicState();
+      socket.emit('state', pub);
     }
   });
 }
 
-// Heartbeat : détecte et ferme les connexions mortes (téléphones déconnectés).
-const heartbeat = setInterval(() => {
-  wss.clients.forEach((ws) => {
-    if (ws.isAlive === false) return ws.terminate();
-    ws.isAlive = false;
-    try {
-      ws.ping();
-    } catch {
-      /* ignore */
-    }
-  });
-}, 30000);
-wss.on('close', () => clearInterval(heartbeat));
+// (Socket.IO gère lui-même le heartbeat ping/pong et la détection des déconnexions.)
 
 /** IP du client en tenant compte d'un reverse proxy (hébergement en ligne).
  *  Render/Railway/Fly mettent l'IP réelle dans X-Forwarded-For ; sans cela, tous les
  *  clients partageraient l'IP du proxy → un seul mauvais code verrouillerait tout le monde
- *  (l'anti-brute-force est par IP). En LAN (pas de proxy), on garde l'IP de la socket.
+ *  (l'anti-brute-force est par IP). En direct (pas de proxy), on garde l'adresse de la socket.
  *  NB : X-Forwarded-For est falsifiable ; ce keyage évite surtout le verrouillage global.
  *  En exposition publique, la vraie protection reste un REGIE_CODE long. */
-function clientIp(req) {
-  const xff = (req.headers && req.headers['x-forwarded-for']) || '';
+function clientIp(handshake) {
+  const xff = (handshake.headers && handshake.headers['x-forwarded-for']) || '';
   const first = xff.split(',')[0].trim();
-  return first || (req.socket && req.socket.remoteAddress) || 'unknown';
+  return first || handshake.address || 'unknown';
 }
 
-wss.on('connection', (ws, req) => {
-  ws.isAlive = true;
-  ws.on('pong', () => {
-    ws.isAlive = true;
-  });
-  ws._ip = clientIp(req);
-  // Authentification de contrôle : code passé en query (?code=...) à la connexion.
-  // Le rôle (?role=regie|animateur) sert à appliquer le mode lecture seule animateur.
-  let code = '';
-  let role = '';
-  try {
-    const u = new URL(req.url, 'http://localhost');
-    code = u.searchParams.get('code') || '';
-    role = u.searchParams.get('role') || '';
-  } catch {
-    code = '';
-    role = '';
-  }
-  ws._queryRole = role; // indice fourni par le client (peut être ignoré, cf. effectiveRole)
-  const res = validateCode(ws._ip, code);
-  ws._authed = res.ok;
-  ws._role = effectiveRole(role, res.role);
+io.on('connection', (socket) => {
+  const hs = socket.handshake;
+  socket.data.ip = clientIp(hs);
+  // Identifiants à la connexion : via `auth` (recommandé, re-transmis aux reconnexions),
+  // avec repli sur la query. Le rôle (regie|animateur) n'est qu'un indice : l'autorité
+  // réelle vient du code validé (cf. effectiveRole).
+  const cred = hs.auth || {};
+  const q = hs.query || {};
+  const code = (cred.code || q.code || '').toString();
+  const role = (cred.role || q.role || '').toString();
+  socket.data.queryRole = role;
+  const res = validateCode(socket.data.ip, code);
+  socket.data.authed = res.ok;
+  socket.data.role = effectiveRole(role, res.role);
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();
-  sendStateTo(ws);
-  ws.send(JSON.stringify({ type: 'auth', ok: ws._authed, locked: !!res.locked }));
+  sendStateTo(socket);
+  socket.emit('auth', { ok: res.ok, locked: !!res.locked });
 
-  ws.on('message', (raw) => {
-    let msg;
-    try {
-      msg = JSON.parse(raw.toString());
-    } catch {
+  // Authentification a posteriori (saisie du code dans la régie/animateur).
+  socket.on('auth', (code) => {
+    const wasAuthed = socket.data.authed;
+    const res = validateCode(socket.data.ip, (code || '').toString());
+    socket.data.authed = res.ok;
+    if (res.ok) socket.data.role = effectiveRole(socket.data.queryRole, res.role);
+    socket.emit('auth', { ok: res.ok, locked: !!res.locked });
+    // Si on vient d'obtenir l'accès, on pousse l'état complet (réponses incluses).
+    if (res.ok && !wasAuthed) sendStateTo(socket);
+  });
+
+  socket.on('command', (msg) => {
+    msg = msg || {};
+    // Seules les surfaces de contrôle authentifiées peuvent commander.
+    if (!socket.data.authed) {
+      socket.emit('auth', { ok: false });
       return;
     }
-
-    // Authentification a posteriori (saisie du code dans la régie/animateur).
-    if (msg.type === 'auth') {
-      const wasAuthed = ws._authed;
-      const res = validateCode(ws._ip, (msg.code || '').toString());
-      ws._authed = res.ok;
-      if (res.ok) ws._role = effectiveRole(ws._queryRole, res.role); // le code peut déterminer le rôle
-      ws.send(JSON.stringify({ type: 'auth', ok: ws._authed, locked: !!res.locked }));
-      // Si on vient d'obtenir l'accès, on pousse l'état complet (réponses incluses).
-      if (ws._authed && !wasAuthed) sendStateTo(ws);
-      return;
-    }
-
-    if (msg.type === 'command') {
-      // Seules les surfaces de contrôle authentifiées peuvent commander.
-      if (!ws._authed) {
-        ws.send(JSON.stringify({ type: 'auth', ok: false }));
-        return;
+    // Fail-safe : tout ce qui n'est pas explicitement la régie est soumis au gating.
+    const isAnimator = socket.data.role !== 'regie';
+    // Animateur en lecture seule (vision) : aucune commande ne passe.
+    if (isAnimator && !animatorControl) return;
+    // Le mode de l'animateur ne se change que depuis la régie.
+    if (msg.action === 'setAnimatorControl' && isAnimator) return;
+    const handler = handlers[msg.action];
+    if (handler) {
+      try {
+        handler(msg.payload || {});
+      } catch (err) {
+        console.error('Erreur commande', msg.action, err);
       }
-      // Fail-safe : tout ce qui n'est pas explicitement la régie est soumis au gating.
-      const isAnimator = ws._role !== 'regie';
-      // Animateur en lecture seule (vision) : aucune commande ne passe.
-      if (isAnimator && !animatorControl) return;
-      // Le mode de l'animateur ne se change que depuis la régie.
-      if (msg.action === 'setAnimatorControl' && isAnimator) return;
-      const handler = handlers[msg.action];
-      if (handler) {
-        try {
-          handler(msg.payload || {});
-        } catch (err) {
-          console.error('Erreur commande', msg.action, err);
-        }
-        broadcastState();
-      }
-    } else if (msg.type === 'sound') {
-      if (!ws._authed) return; // les sons sont déclenchés par le contrôle
-      if (ws._role !== 'regie' && !animatorControl) return; // animateur en vision
-      // Événement sonore transitoire : on relaie à tous les écrans.
-      // Anti-rebond : ignore un même son redéclenché < 150 ms après (double-clic,
-      // ou régie + animateur qui agissent en parallèle).
-      if (!msg.stop) {
-        const now = Date.now();
-        if (lastSoundAt[msg.name] && now - lastSoundAt[msg.name] < 150) return;
-        lastSoundAt[msg.name] = now;
-      }
-      broadcast({ type: 'sound', name: msg.name, stop: !!msg.stop });
-    } else if (msg.type === 'hello' && msg.role === 'buzzer') {
-      // Un smartphone s'annonce comme buzzer d'une équipe.
-      ws._buzzerTeam = msg.team === 1 ? 1 : 0;
       broadcastState();
-    } else if (msg.type === 'buzz') {
-      // Seul un buzzer déclaré peut buzzer, et UNIQUEMENT pour sa propre équipe
-      // (l'équipe est celle du socket, jamais celle du payload — anti-triche).
-      const team = ws._buzzerTeam;
-      if ((team === 0 || team === 1) && state.buzzer.armed && state.buzzer.winner === null) {
-        state.buzzer.winner = team;
-        state.buzzer.armed = false;
-        // L'équipe qui a buzzé prend la main sur le plateau en cours.
-        if (state.board) state.board.activeTeamIndex = team;
-        broadcast({ type: 'sound', name: 'buzzer' });
-        broadcastState();
-      }
     }
   });
 
-  ws.on('close', () => {
-    if (ws._buzzerTeam === 0 || ws._buzzerTeam === 1) {
+  socket.on('sound', (msg) => {
+    msg = msg || {};
+    if (!socket.data.authed) return; // les sons sont déclenchés par le contrôle
+    if (socket.data.role !== 'regie' && !animatorControl) return; // animateur en vision
+    // Anti-rebond : ignore un même son redéclenché < 150 ms après (double-clic,
+    // ou régie + animateur qui agissent en parallèle).
+    if (!msg.stop) {
+      const now = Date.now();
+      if (lastSoundAt[msg.name] && now - lastSoundAt[msg.name] < 150) return;
+      lastSoundAt[msg.name] = now;
+    }
+    emitSound(msg.name, msg.stop);
+  });
+
+  // Un smartphone s'annonce comme buzzer d'une équipe.
+  socket.on('hello', (msg) => {
+    msg = msg || {};
+    socket.data.buzzerTeam = msg.team === 1 ? 1 : 0;
+    broadcastState();
+  });
+
+  socket.on('buzz', () => {
+    // Seul un buzzer déclaré peut buzzer, et UNIQUEMENT pour sa propre équipe
+    // (l'équipe est celle du socket, jamais celle du payload — anti-triche).
+    const team = socket.data.buzzerTeam;
+    if ((team === 0 || team === 1) && state.buzzer.armed && state.buzzer.winner === null) {
+      state.buzzer.winner = team;
+      state.buzzer.armed = false;
+      // L'équipe qui a buzzé prend la main sur le plateau en cours.
+      if (state.board) state.board.activeTeamIndex = team;
+      emitSound('buzzer');
+      broadcastState();
+    }
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.data.buzzerTeam === 0 || socket.data.buzzerTeam === 1) {
       broadcastState(); // recompte les buzzers + diffuse (état expurgé pour les non-authentifiés)
     }
   });

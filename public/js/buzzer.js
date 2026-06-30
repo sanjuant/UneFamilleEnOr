@@ -6,37 +6,25 @@
 let team = localStorage.getItem('buzzerTeam');
 team = team !== null ? Number(team) : null;
 let st = null;
-let ws;
 let lastArmed = false;
 
 const $ = (id) => document.getElementById(id);
 const connDot = $('conn');
 
-function connect() {
-  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
-  ws.onopen = () => {
-    connDot.classList.add('ok');
-    helloIfReady();
-  };
-  ws.onclose = () => {
-    connDot.classList.remove('ok');
-    setTimeout(connect, 1000);
-  };
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data);
-    if (msg.type === 'state') {
-      st = msg.state;
-      render();
-    }
-  };
-}
-connect();
+// Socket.IO : WebSocket avec repli automatique en long-polling, reconnexion auto.
+const socket = io();
+socket.on('connect', () => {
+  connDot.classList.add('ok');
+  helloIfReady();
+});
+socket.on('disconnect', () => connDot.classList.remove('ok'));
+socket.on('state', (s) => {
+  st = s;
+  render();
+});
 
-function send(obj) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
-}
 function helloIfReady() {
-  if (team !== null) send({ type: 'hello', role: 'buzzer', team });
+  if (team !== null) socket.emit('hello', { team });
 }
 
 // --- Choix de l'équipe ---
@@ -60,7 +48,7 @@ function tryBuzz() {
   if (!st || team === null) return;
   const bz = st.buzzer || {};
   if (bz.armed && (bz.winner === null || bz.winner === undefined)) {
-    send({ type: 'buzz', team });
+    socket.emit('buzz');
     if (navigator.vibrate) navigator.vibrate(120);
   }
 }

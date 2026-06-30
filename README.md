@@ -129,10 +129,11 @@ Puis chacun ouvre, depuis n'importe quel appareil avec internet :
 **Variables d'environnement utiles** : `REGIE_CODE` (obligatoire en public), `ANIMATEUR_CODE` (optionnel, code animateur distinct), `LAN_HOST` (URL publique pour le QR), `ANIMATOR_CONTROL=1` (animateur pilote par défaut). `PORT` est géré automatiquement par l'hébergeur.
 
 **À savoir**
-- **Une seule instance** : l'état du jeu est en mémoire, donc pas d'autoscaling (1 instance = tout le monde voit la même partie).
+- **Réseaux d'entreprise / proxys** : le temps réel utilise **Socket.IO**, qui bascule automatiquement en **HTTP long-polling** quand le WebSocket est bloqué (cas fréquent derrière un proxy d'entreprise). Le jeu fonctionne donc même là où le `wss://` direct échoue.
+- **Une seule instance** : l'état du jeu est en mémoire, donc pas d'autoscaling (1 instance = tout le monde voit la même partie). *(Le long-polling de Socket.IO suppose d'ailleurs une instance unique — ce qui est notre cas.)*
 - **Offre gratuite = mise en veille** après ~15 min sans activité : 1er accès lent (~30 s) et **état réinitialisé** (il suffit de recharger le JSON). Pour éviter ça, passer en offre payante (~7 $/mois).
 - **Sécurité** : le jeu devient public ; seul le code protège régie/animateur (anti-brute-force par IP réelle activé). Mets un code long, pas « 1234 ».
-- Équivalents : **Railway**, **Fly.io** (même principe : 1 instance, WebSocket, `npm start`).
+- Équivalents : **Railway**, **Fly.io** (même principe : 1 instance, `npm start`).
 
 ### Alternative sans héberger : tunnel
 

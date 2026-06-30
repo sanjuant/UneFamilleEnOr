@@ -2,46 +2,40 @@
  *  Régie — pupitre de l'animateur.
  * ------------------------------------------------------------------ */
 
-let ws;
 let state = null;
 let authed = false;
 let ctrlCode = localStorage.getItem('ctrlCode') || '';
 const connEl = document.getElementById('conn');
 
-function connect() {
-  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/?role=regie&code=${encodeURIComponent(ctrlCode)}`);
-  ws.onopen = () => {
-    connEl.textContent = '● en ligne';
-    connEl.classList.add('ok');
-  };
-  ws.onclose = () => {
-    connEl.textContent = '● hors ligne';
-    connEl.classList.remove('ok');
-    authed = false; // on ne peut plus commander tant qu'on n'est pas reconnecté+ré-authentifié
-    setTimeout(connect, 1000);
-  };
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data);
-    if (msg.type === 'auth') {
-      handleAuth(msg.ok, msg.locked);
-    } else if (msg.type === 'state') {
-      state = msg.state;
-      render();
-    } else if (msg.type === 'sound') {
-      if (msg.stop) SoundManager.stop(msg.name);
-      else SoundManager.play(msg.name, msg.name === 'final' ? { loop: true } : {});
-    }
-  };
-}
-connect();
+// Socket.IO : WebSocket avec repli automatique en long-polling (proxys d'entreprise),
+// reconnexion auto. Le code/rôle voyagent dans `auth` (re-transmis aux reconnexions).
+const socket = io({ auth: { role: 'regie', code: ctrlCode } });
+socket.on('connect', () => {
+  connEl.textContent = '● en ligne';
+  connEl.classList.add('ok');
+});
+socket.on('disconnect', () => {
+  connEl.textContent = '● hors ligne';
+  connEl.classList.remove('ok');
+  authed = false; // on ne peut plus commander tant qu'on n'est pas reconnecté+ré-authentifié
+});
+socket.on('auth', ({ ok, locked }) => handleAuth(ok, locked));
+socket.on('state', (s) => {
+  state = s;
+  render();
+});
+socket.on('sound', ({ name, stop }) => {
+  if (stop) SoundManager.stop(name);
+  else SoundManager.play(name, name === 'final' ? { loop: true } : {});
+});
 
 function cmd(action, payload = {}) {
   if (!authed) return;
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'command', action, payload }));
+  socket.emit('command', { action, payload });
 }
 function sound(name, stop = false) {
   if (!authed) return;
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'sound', name, stop }));
+  socket.emit('sound', { name, stop });
 }
 
 // ---- Portail de code d'accès ----
@@ -80,8 +74,8 @@ function submitCode() {
   ctrlCode = v;
   localStorage.setItem('ctrlCode', ctrlCode);
   manualAttempt = true;
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'auth', code: ctrlCode }));
-  else connect();
+  socket.auth = { role: 'regie', code: ctrlCode }; // utilisé aux reconnexions
+  socket.emit('auth', ctrlCode); // validation immédiate sans reconnecter
 }
 document.getElementById('authSubmit').addEventListener('click', submitCode);
 document.getElementById('authInput').addEventListener('keydown', (e) => {

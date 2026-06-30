@@ -4,7 +4,6 @@
  *  (ou les garder masquées pour ne pas se spoiler).
  * ------------------------------------------------------------------ */
 
-let ws;
 let state = null;
 let authed = false;
 let ctrlCode = localStorage.getItem('ctrlCode') || '';
@@ -16,25 +15,19 @@ let hideAnswers = localStorage.getItem('animHideAnswers') !== '0';
 const $ = (id) => document.getElementById(id);
 const connDot = $('conn');
 
-function connect() {
-  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/?role=animateur&code=${encodeURIComponent(ctrlCode)}`);
-  ws.onopen = () => connDot.classList.add('ok');
-  ws.onclose = () => {
-    connDot.classList.remove('ok');
-    authed = false;
-    setTimeout(connect, 1000);
-  };
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data);
-    if (msg.type === 'auth') {
-      handleAuth(msg.ok, msg.locked);
-    } else if (msg.type === 'state') {
-      state = msg.state;
-      render();
-    }
-  };
-}
-connect();
+// Socket.IO : WebSocket avec repli automatique en long-polling (proxys d'entreprise),
+// reconnexion auto. Le code/rôle voyagent dans `auth` (re-transmis aux reconnexions).
+const socket = io({ auth: { role: 'animateur', code: ctrlCode } });
+socket.on('connect', () => connDot.classList.add('ok'));
+socket.on('disconnect', () => {
+  connDot.classList.remove('ok');
+  authed = false;
+});
+socket.on('auth', ({ ok, locked }) => handleAuth(ok, locked));
+socket.on('state', (s) => {
+  state = s;
+  render();
+});
 
 // L'animateur ne peut piloter que si la régie l'a autorisé (sinon : vision seule).
 function canControl() {
@@ -42,12 +35,12 @@ function canControl() {
 }
 function cmd(action, payload = {}) {
   if (!canControl()) return;
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'command', action, payload }));
+  socket.emit('command', { action, payload });
 }
 // Déclenche un son sur l'écran de jeu (cette page ne joue rien localement).
 function sound(name) {
   if (!canControl()) return;
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'sound', name }));
+  socket.emit('sound', { name });
 }
 
 // ---- Portail de code d'accès ----
@@ -85,8 +78,8 @@ function submitCode() {
   ctrlCode = v;
   localStorage.setItem('ctrlCode', ctrlCode);
   manualAttempt = true;
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'auth', code: ctrlCode }));
-  else connect();
+  socket.auth = { role: 'animateur', code: ctrlCode }; // utilisé aux reconnexions
+  socket.emit('auth', ctrlCode); // validation immédiate sans reconnecter
 }
 $('authSubmit').addEventListener('click', submitCode);
 $('authInput').addEventListener('keydown', (e) => {

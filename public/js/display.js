@@ -7,25 +7,15 @@ const connDot = document.getElementById('connDot');
 let prev = null;
 let cur = null; // dernier état reçu (utilisé par le décompte du chrono)
 
-// ---- Connexion WebSocket (avec reconnexion automatique) ----
-let ws;
-function connect() {
-  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
-  ws.onopen = () => connDot.classList.add('ok');
-  ws.onclose = () => {
-    connDot.classList.remove('ok');
-    setTimeout(connect, 1000);
-  };
-  ws.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data);
-    if (msg.type === 'state') render(msg.state);
-    else if (msg.type === 'sound') {
-      if (msg.stop) SoundManager.stop(msg.name);
-      else SoundManager.play(msg.name, msg.name === 'final' ? { loop: true } : {});
-    }
-  };
-}
-connect();
+// ---- Connexion temps réel (Socket.IO : WebSocket + repli long-polling, reconnexion auto) ----
+const socket = io();
+socket.on('connect', () => connDot.classList.add('ok'));
+socket.on('disconnect', () => connDot.classList.remove('ok'));
+socket.on('state', (s) => render(s));
+socket.on('sound', ({ name, stop }) => {
+  if (stop) SoundManager.stop(name);
+  else SoundManager.play(name, name === 'final' ? { loop: true } : {});
+});
 
 // ---- Activation du son + plein écran ----
 const gate = document.getElementById('soundGate');
