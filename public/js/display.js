@@ -24,12 +24,15 @@ function playVideo(src) {
   const v = document.getElementById('jingleVideo');
   if (!ov || !v) return;
   // Coupe les autres sons pendant le jingle (évite la superposition avec la musique).
-  videoWasMuted = SoundManager.isMuted();
+  // On ne mémorise l'état de mute qu'à la 1re entrée : une rediffusion / un enchaînement
+  // de jingles ne doit pas écraser l'état sauvegardé (sinon le son resterait coupé).
+  if (!ov.classList.contains('show')) videoWasMuted = SoundManager.isMuted();
   SoundManager.setMuted(true);
   v.src = src;
   ov.classList.add('show');
-  try { v.currentTime = 0; } catch {}
-  v.play().catch(() => {});
+  // Si l'autoplay est refusé (public n'a pas encore activé le son), on ne reste pas
+  // bloqué sur un écran noir : on referme l'overlay et on restaure le son.
+  v.play().catch(() => hideVideo());
 }
 function hideVideo() {
   const ov = document.getElementById('videoOverlay');
@@ -284,11 +287,8 @@ function renderJoinQR(s) {
   const ov = document.getElementById('joinQr');
   if (!ov) return;
   ov.classList.toggle('show', !!s.showJoinQR);
-  // Adresse à ouvrir sur les téléphones : origine réelle de la page (domaine en ligne,
-  // IP en local), avec repli sur l'IP LAN détectée si l'écran est ouvert sur localhost.
-  const h = location.hostname;
-  const isLocal = h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '';
-  const base = (isLocal && s.lanUrl ? s.lanUrl : location.origin).replace(/\/+$/, '');
+  // Adresse à ouvrir sur les téléphones (helper partagé : public/js/net-util.js).
+  const base = buzzerBase(s);
   const url = document.getElementById('joinQrUrl');
   if (url) url.textContent = `${base}/buzzer`;
   // Rafraîchit l'image du QR seulement quand l'adresse change.

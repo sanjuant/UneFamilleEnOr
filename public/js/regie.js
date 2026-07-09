@@ -366,9 +366,9 @@ function renderBuzzer() {
   }
   // Adresse que les téléphones doivent ouvrir (domaine en ligne, IP en local).
   const lanUrl = state.lanUrl || location.origin; // pour la synchro du menu déroulant
-  const buzzerBase = publicBuzzerBase(state);
+  const bBase = buzzerBase(state); // helper partagé (public/js/net-util.js)
   const url = document.getElementById('buzzUrl');
-  if (url) url.textContent = `${buzzerBase}/buzzer`;
+  if (url) url.textContent = `${bBase}/buzzer`;
 
   // Liste des IP candidates (reconstruite seulement si elle change)
   const sel = document.getElementById('lanSelect');
@@ -386,9 +386,9 @@ function renderBuzzer() {
 
   // Rafraîchit l'image du QR seulement quand l'adresse change.
   const qr = document.getElementById('buzzQr');
-  if (qr && qr.dataset.base !== buzzerBase) {
-    qr.dataset.base = buzzerBase;
-    qr.src = '/qr/buzzer?url=' + encodeURIComponent(buzzerBase);
+  if (qr && qr.dataset.base !== bBase) {
+    qr.dataset.base = bBase;
+    qr.src = '/qr/buzzer?url=' + encodeURIComponent(bBase);
   }
   const qrScreenBtn = document.getElementById('qrScreenBtn');
   if (qrScreenBtn) {
@@ -953,14 +953,4 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) {
   return escapeHtml(s);
-}
-
-// URL que les téléphones doivent ouvrir pour les buzzers. Sur localhost (régie sur le
-// PC hôte), « localhost » est inutilisable par les mobiles → on prend l'IP LAN détectée
-// par le serveur. Sinon (IP LAN ou domaine public en ligne), l'origine de la page convient.
-function publicBuzzerBase(s) {
-  const h = location.hostname;
-  const isLocal = h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '';
-  const base = isLocal && s && s.lanUrl ? s.lanUrl : location.origin;
-  return base.replace(/\/+$/, '');
 }
