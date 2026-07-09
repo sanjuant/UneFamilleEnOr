@@ -12,6 +12,8 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 🏆 **Comptage des points** automatique (cagnotte × multiplicateur) + ajustement manuel.
 - ❌ **Gestion des fautes** (les 3 X) avec animation plein écran.
 - 🎵 **Sons** : joue tes propres MP3 (dossier `sounds/`), avec repli automatique sur des sons de synthèse.
+- 🎬 **Jingle vidéo** : diffuse une vidéo en plein écran sur l'écran de jeu depuis la régie (fichiers déposés dans `media/` ou URL).
+- 🖥️ **Thèmes de l'écran de jeu** : **sombre**, **clair** ou **rétro 90s** (kitsch) — choisis en régie.
 - 🎉 Écran de victoire avec confettis.
 - 📖 **Règles intégrées** : page `/regles` (avec déroulé détaillé de la manche finale) accessible depuis la régie.
 - 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main). **QR code** de connexion intégré.
@@ -116,7 +118,8 @@ Si tout le monde n'est **pas sur le même réseau**, on met le jeu en ligne : un
 1. Pousser ce dépôt sur **GitHub**.
 2. Sur [render.com](https://render.com) : **New → Blueprint** → choisir le dépôt (le fichier [`render.yaml`](render.yaml) est détecté). *(Sinon : New → Web Service, build `npm install`, start `npm start`.)*
 3. Définir la variable **`REGIE_CODE`** dans le dashboard — choisis un **code solide** (le jeu est public).
-4. Après le 1er déploiement, copier l'URL `https://<nom>.onrender.com` dans la variable **`LAN_HOST`** : le **QR / l'adresse des buzzers** pointeront alors vers la bonne URL.
+
+Le **QR des buzzers** pointe automatiquement vers le domaine public (il est dérivé de l'adresse de la page) — aucune configuration nécessaire.
 
 Puis chacun ouvre, depuis n'importe quel appareil avec internet :
 | Rôle | Adresse |
@@ -126,7 +129,7 @@ Puis chacun ouvre, depuis n'importe quel appareil avec internet :
 | Animateur | `https://<nom>.onrender.com/animateur` |
 | Buzzers | `https://<nom>.onrender.com/buzzer` |
 
-**Variables d'environnement utiles** : `REGIE_CODE` (obligatoire en public), `ANIMATEUR_CODE` (optionnel, code animateur distinct), `LAN_HOST` (URL publique pour le QR), `ANIMATOR_CONTROL=1` (animateur pilote par défaut). `PORT` est géré automatiquement par l'hébergeur.
+**Variables d'environnement utiles** : `REGIE_CODE` (obligatoire en public), `ANIMATEUR_CODE` (optionnel, code animateur distinct), `ANIMATOR_CONTROL=1` (animateur pilote par défaut), `THEME=dark|light|retro` (thème par défaut de l'écran), `LAN_HOST` (force l'URL des buzzers si besoin). `PORT` est géré automatiquement par l'hébergeur.
 
 **À savoir**
 - **Réseaux d'entreprise / proxys** : le temps réel utilise **Socket.IO**, qui bascule automatiquement en **HTTP long-polling** quand le WebSocket est bloqué (cas fréquent derrière un proxy d'entreprise). Le jeu fonctionne donc même là où le `wss://` direct échoue.
