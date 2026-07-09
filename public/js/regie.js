@@ -323,10 +323,11 @@ function renderBuzzer() {
     const n1 = bz.connected?.[1] || 0;
     conn.textContent = `Connectés — ${state.teams[0].name} : ${n0} · ${state.teams[1].name} : ${n1}`;
   }
-  // Adresse de connexion (réseau) affichée sous le QR
-  const lanUrl = state.lanUrl || location.origin;
+  // Adresse que les téléphones doivent ouvrir (domaine en ligne, IP en local).
+  const lanUrl = state.lanUrl || location.origin; // pour la synchro du menu déroulant
+  const buzzerBase = publicBuzzerBase(state);
   const url = document.getElementById('buzzUrl');
-  if (url) url.textContent = `${lanUrl}/buzzer`;
+  if (url) url.textContent = `${buzzerBase}/buzzer`;
 
   // Liste des IP candidates (reconstruite seulement si elle change)
   const sel = document.getElementById('lanSelect');
@@ -342,11 +343,11 @@ function renderBuzzer() {
     if (document.activeElement !== sel) sel.value = lanUrl;
   }
 
-  // Rafraîchit l'image du QR seulement quand l'adresse change (cache-buster).
+  // Rafraîchit l'image du QR seulement quand l'adresse change.
   const qr = document.getElementById('buzzQr');
-  if (qr && qr.dataset.lan !== lanUrl) {
-    qr.dataset.lan = lanUrl;
-    qr.src = '/qr/buzzer?v=' + encodeURIComponent(lanUrl);
+  if (qr && qr.dataset.base !== buzzerBase) {
+    qr.dataset.base = buzzerBase;
+    qr.src = '/qr/buzzer?url=' + encodeURIComponent(buzzerBase);
   }
   const qrScreenBtn = document.getElementById('qrScreenBtn');
   if (qrScreenBtn) {
@@ -911,4 +912,14 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) {
   return escapeHtml(s);
+}
+
+// URL que les téléphones doivent ouvrir pour les buzzers. Sur localhost (régie sur le
+// PC hôte), « localhost » est inutilisable par les mobiles → on prend l'IP LAN détectée
+// par le serveur. Sinon (IP LAN ou domaine public en ligne), l'origine de la page convient.
+function publicBuzzerBase(s) {
+  const h = location.hostname;
+  const isLocal = h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '';
+  const base = isLocal && s && s.lanUrl ? s.lanUrl : location.origin;
+  return base.replace(/\/+$/, '');
 }

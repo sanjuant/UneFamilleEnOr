@@ -141,10 +141,17 @@ app.get('/regles', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'r
 app.get('/buzzer', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'buzzer.html')));
 app.get('/animateur', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'animateur.html')));
 
-// QR code (SVG) pointant vers la page buzzer sur le réseau local.
-app.get('/qr/buzzer', async (_req, res) => {
+// QR code (SVG) pointant vers la page buzzer.
+// La cible peut être fournie par le client via ?url= (son origine réelle : le domaine
+// public en ligne, l'IP LAN en local). Ainsi le QR pointe vers le bon hôte sans dépendre
+// de la détection réseau côté serveur (qui, derrière un proxy, renvoie une IP interne).
+// Repli sur l'URL détectée si le paramètre est absent/invalide.
+app.get('/qr/buzzer', async (req, res) => {
   try {
-    const svg = await QRCode.toString(`${currentLanUrl()}/buzzer`, {
+    let base = (req.query.url || '').toString().trim();
+    if (!/^https?:\/\/[^\s]{1,300}$/i.test(base)) base = currentLanUrl();
+    base = base.replace(/\/+$/, '');
+    const svg = await QRCode.toString(`${base}/buzzer`, {
       type: 'svg',
       margin: 1,
       color: { dark: '#0a1740', light: '#ffffff' },

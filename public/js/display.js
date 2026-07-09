@@ -251,14 +251,18 @@ function renderJoinQR(s) {
   const ov = document.getElementById('joinQr');
   if (!ov) return;
   ov.classList.toggle('show', !!s.showJoinQR);
-  const lanUrl = s.lanUrl || location.origin;
+  // Adresse à ouvrir sur les téléphones : origine réelle de la page (domaine en ligne,
+  // IP en local), avec repli sur l'IP LAN détectée si l'écran est ouvert sur localhost.
+  const h = location.hostname;
+  const isLocal = h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '';
+  const base = (isLocal && s.lanUrl ? s.lanUrl : location.origin).replace(/\/+$/, '');
   const url = document.getElementById('joinQrUrl');
-  if (url) url.textContent = `${lanUrl}/buzzer`;
-  // Rafraîchit l'image du QR seulement quand l'adresse change (cache-buster).
+  if (url) url.textContent = `${base}/buzzer`;
+  // Rafraîchit l'image du QR seulement quand l'adresse change.
   const img = document.querySelector('.join-qr__img');
-  if (img && img.dataset.lan !== lanUrl) {
-    img.dataset.lan = lanUrl;
-    img.src = '/qr/buzzer?v=' + encodeURIComponent(lanUrl);
+  if (img && img.dataset.base !== base) {
+    img.dataset.base = base;
+    img.src = '/qr/buzzer?url=' + encodeURIComponent(base);
   }
 }
 
