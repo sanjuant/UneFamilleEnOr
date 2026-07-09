@@ -919,15 +919,20 @@ body {
 /* ---- Effet « split-flap » : chaque lettre dans sa case, qui se retourne ---- */
 [data-theme='retro'] .flaps {
   flex: 1;
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* une seule ligne : la taille des cases s'adapte au nb de lettres */
   justify-content: center;
-  align-content: center;
+  align-items: center;
   gap: clamp(2px, 0.35vw, 5px);
   overflow: hidden;
   white-space: normal;
   text-overflow: clip;
   perspective: 600px;
+  /* Chaque lettre = 1 case ~1.05em ; on dimensionne pour que les N cases tiennent
+     dans la largeur disponible (unités de conteneur), plafonné pour les mots courts. */
+  container-type: inline-size;
+  font-size: clamp(9px, calc(80cqi / var(--n, 8)), 34px);
 }
 [data-theme='retro'] .flap {
   display: inline-grid;
@@ -969,4 +974,11 @@ body {
   100% {
     transform: rotateX(0);
   }
+}
+/* Le fondu du panneau (opacity 0→1 différée) masquait le début du retournement.
+   En rétro, c'est le flip lettre à lettre qui assure la révélation ; le contenu
+   avant révélation reste caché par la pastille-numéro (superposée) et l'état public. */
+[data-theme='retro'] .slot__answer {
+  opacity: 1;
+  transition: none;
 }

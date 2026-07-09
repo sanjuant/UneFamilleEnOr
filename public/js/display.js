@@ -149,7 +149,9 @@ function setAnswerText(el, text) {
   }
   el.classList.add('flaps');
   el.textContent = '';
-  [...String(text)].forEach((ch, i) => {
+  const chars = [...String(text)];
+  el.style.setProperty('--n', chars.length || 1); // sert à dimensionner les cases pour tenir sur 1 ligne
+  chars.forEach((ch, i) => {
     const s = document.createElement('span');
     s.className = ch === ' ' ? 'flap flap--space' : 'flap';
     s.style.setProperty('--i', i);
