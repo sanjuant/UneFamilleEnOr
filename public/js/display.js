@@ -132,6 +132,32 @@ function renderQuestion(s) {
   document.getElementById('qText').textContent = s.board ? s.board.question : '';
 }
 
+// Texte d'une réponse. En thème rétro : chaque lettre dans sa propre case
+// (effet « split-flap » / panneaux qui tournent). Sinon : texte simple.
+// On ne reconstruit le DOM que si le contenu (ou le thème) change, pour ne pas
+// relancer l'animation à chaque rafraîchissement.
+function setAnswerText(el, text) {
+  if (!el) return;
+  const retro = !!(cur && cur.theme === 'retro');
+  const key = (retro ? 'R|' : 'P|') + text;
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  if (!retro) {
+    el.classList.remove('flaps');
+    el.textContent = text;
+    return;
+  }
+  el.classList.add('flaps');
+  el.textContent = '';
+  [...String(text)].forEach((ch, i) => {
+    const s = document.createElement('span');
+    s.className = ch === ' ' ? 'flap flap--space' : 'flap';
+    s.style.setProperty('--i', i);
+    s.textContent = ch === ' ' ? ' ' : ch;
+    el.appendChild(s);
+  });
+}
+
 function renderBoard(board) {
   const el = document.getElementById('board');
   document.getElementById('boardQuestion').textContent = board ? board.question : '';
@@ -162,7 +188,7 @@ function renderBoard(board) {
   answers.forEach((a, i) => {
     const slot = el.children[i];
     const wasRevealed = slot.classList.contains('revealed');
-    slot.querySelector('.slot__text').textContent = a.text;
+    setAnswerText(slot.querySelector('.slot__text'), a.text);
     slot.querySelector('.slot__points').textContent = a.points;
     if (a.revealed && !wasRevealed) {
       slot.classList.add('revealed');
@@ -220,7 +246,7 @@ function renderFinal(fs, s) {
       const masked = fs.concealFirst && col === 0;
       // On n'écrit le contenu réel dans le DOM public QUE s'il n'est pas masqué
       // (évite toute fuite par inspection de la page sur le réseau).
-      fc.querySelector('.ftext').textContent = masked ? '' : cell.answer;
+      setAnswerText(fc.querySelector('.ftext'), masked ? '' : cell.answer);
       fc.querySelector('.fpts').textContent = masked ? '' : cell.points;
 
       fc.classList.toggle('revealed', !!cell.revealed && !masked);

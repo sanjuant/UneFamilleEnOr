@@ -915,3 +915,58 @@ body {
 [data-theme='retro'] .fpp-fill {
   background: linear-gradient(90deg, #ffab00, #ffe23d);
 }
+
+/* ---- Effet « split-flap » : chaque lettre dans sa case, qui se retourne ---- */
+[data-theme='retro'] .flaps {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: clamp(2px, 0.35vw, 5px);
+  overflow: hidden;
+  white-space: normal;
+  text-overflow: clip;
+  perspective: 600px;
+}
+[data-theme='retro'] .flap {
+  display: inline-grid;
+  place-items: center;
+  width: 1.05em;
+  height: 1.32em;
+  color: #ffe23d;
+  /* pli horizontal du volet (ligne médiane sombre) */
+  background: linear-gradient(180deg, #10328f 0 calc(50% - 0.6px), #06184e calc(50% + 0.6px) 100%);
+  border: 1px solid #04102f;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+[data-theme='retro'] .flap--space {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+/* On remplace le retournement global du panneau par un retournement lettre à lettre */
+[data-theme='retro'] .slot.revealed {
+  animation: none;
+}
+[data-theme='retro'] .slot.revealed .flap,
+[data-theme='retro'] .fcell.revealed .flap {
+  animation: flap-turn 0.5s cubic-bezier(0.3, 0.8, 0.25, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+  transform-origin: center top;
+  backface-visibility: hidden;
+}
+@keyframes flap-turn {
+  0% {
+    transform: rotateX(90deg);
+    opacity: 0;
+  }
+  55% {
+    transform: rotateX(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0);
+  }
+}
