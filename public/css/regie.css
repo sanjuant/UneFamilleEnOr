@@ -724,6 +724,25 @@ body.regie {
   font-size: 12px;
 }
 
+/* Jingle vidéo */
+.video-select,
+.video-url {
+  background: var(--bg-0);
+  color: var(--white);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+}
+.video-select {
+  min-width: 180px;
+  max-width: 260px;
+}
+.video-url {
+  flex: 1;
+  min-width: 220px;
+}
+
 /* Page animateur : droits */
 .anim-ctrl-hint {
   font-size: 13px;

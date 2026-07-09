@@ -726,3 +726,22 @@ body {
 .conn-dot.ok {
   background: var(--green);
 }
+
+/* Jingle vidéo : plein écran, au-dessus de tout le reste */
+.video-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: #000;
+  display: none;
+  place-items: center;
+}
+.video-overlay.show {
+  display: grid;
+}
+.video-overlay video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}

@@ -183,6 +183,33 @@ document.getElementById('nextRoundBtn').addEventListener('click', nextRound);
 document.getElementById('animModeView').addEventListener('click', () => cmd('setAnimatorControl', { on: false }));
 document.getElementById('animModeCtrl').addEventListener('click', () => cmd('setAnimatorControl', { on: true }));
 
+// Jingle vidéo : liste des fichiers du serveur + diffusion/arrêt sur l'écran de jeu
+(() => {
+  const sel = document.getElementById('videoSelect');
+  const urlInput = document.getElementById('videoUrl');
+  if (!sel) return;
+  fetch('/media/list')
+    .then((r) => r.json())
+    .then((vids) => {
+      (vids || []).forEach((v) => {
+        const o = document.createElement('option');
+        o.value = v.url;
+        o.textContent = v.file;
+        sel.appendChild(o);
+      });
+    })
+    .catch(() => {});
+  document.getElementById('videoPlay').addEventListener('click', () => {
+    if (!authed) return;
+    const src = (urlInput.value || '').trim() || sel.value;
+    if (!src) { alert('Choisis une vidéo dans la liste ou colle une URL.'); return; }
+    socket.emit('video', { src });
+  });
+  document.getElementById('videoStop').addEventListener('click', () => {
+    if (authed) socket.emit('video', { stop: true });
+  });
+})();
+
 // Aide des raccourcis clavier
 const shortcutsOverlay = document.getElementById('shortcutsOverlay');
 const toggleShortcuts = (show) => {

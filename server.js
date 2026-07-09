@@ -11,6 +11,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 const QRCode = require('qrcode');
 const { Server } = require('socket.io');
 
@@ -134,6 +135,20 @@ function refreshLan() {
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
+app.use('/media', express.static(path.join(__dirname, 'media')));
+
+// Liste des jingles vidéo disponibles (fichiers déposés dans media/).
+app.get('/media/list', (_req, res) => {
+  fs.readdir(path.join(__dirname, 'media'), (err, files) => {
+    if (err) return res.json([]);
+    res.json(
+      (files || [])
+        .filter((f) => /\.(mp4|webm|ogg|ogv|mov|m4v)$/i.test(f))
+        .sort()
+        .map((f) => ({ file: f, url: '/media/' + encodeURIComponent(f) }))
+    );
+  });
+});
 
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'display.html')));
 app.get('/regie', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'regie.html')));
@@ -699,6 +714,17 @@ io.on('connection', (socket) => {
       lastSoundAt[msg.name] = now;
     }
     emitSound(msg.name, msg.stop);
+  });
+
+  // Jingle vidéo diffusé sur l'écran de jeu (même contrôle d'accès que les sons).
+  socket.on('video', (msg) => {
+    msg = msg || {};
+    if (!socket.data.authed) return;
+    if (socket.data.role !== 'regie' && !animatorControl) return;
+    if (msg.stop) return io.emit('video', { stop: true });
+    const src = (msg.src || '').toString().slice(0, 500);
+    // N'accepte qu'un fichier local /media ou une URL http(s) (anti-abus léger).
+    if (/^\/media\//.test(src) || /^https?:\/\//i.test(src)) io.emit('video', { src });
   });
 
   // Un smartphone s'annonce comme buzzer d'une équipe.

@@ -1,0 +1,14 @@
+Jingles vidéo
+=============
+
+Déposez ici vos fichiers vidéo (.mp4, .webm, .ogg, .mov, .m4v).
+Ils apparaîtront automatiquement dans la liste déroulante de la régie
+(carte « 🎬 Jingle vidéo »), et se diffusent en plein écran sur l'écran de jeu.
+
+- Format conseillé : .mp4 (H.264/AAC) ou .webm, largement compatibles navigateurs.
+- Vous pouvez aussi coller directement une URL de vidéo dans la régie
+  (utile en ligne : pas besoin d'embarquer le fichier dans le dépôt).
+- En hébergement gratuit (Render), les fichiers déposés doivent être commités
+  dans le dépôt pour être déployés ; sinon, préférez une URL.
+
+Astuce : gardez les jingles courts et légers (quelques Mo) pour un démarrage rapide.

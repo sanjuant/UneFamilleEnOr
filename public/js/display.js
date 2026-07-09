@@ -17,6 +17,37 @@ socket.on('sound', ({ name, stop }) => {
   else SoundManager.play(name, name === 'final' ? { loop: true } : {});
 });
 
+// ---- Jingle vidéo (plein écran, piloté par la régie) ----
+let videoWasMuted = false;
+function playVideo(src) {
+  const ov = document.getElementById('videoOverlay');
+  const v = document.getElementById('jingleVideo');
+  if (!ov || !v) return;
+  // Coupe les autres sons pendant le jingle (évite la superposition avec la musique).
+  videoWasMuted = SoundManager.isMuted();
+  SoundManager.setMuted(true);
+  v.src = src;
+  ov.classList.add('show');
+  try { v.currentTime = 0; } catch {}
+  v.play().catch(() => {});
+}
+function hideVideo() {
+  const ov = document.getElementById('videoOverlay');
+  const v = document.getElementById('jingleVideo');
+  if (!ov || !v) return;
+  ov.classList.remove('show');
+  v.pause();
+  v.removeAttribute('src');
+  v.load();
+  SoundManager.setMuted(videoWasMuted);
+}
+socket.on('video', (msg) => {
+  if (!msg) return;
+  if (msg.stop) hideVideo();
+  else if (msg.src) playVideo(msg.src);
+});
+document.getElementById('jingleVideo').addEventListener('ended', hideVideo);
+
 // ---- Activation du son + plein écran ----
 const gate = document.getElementById('soundGate');
 document.getElementById('soundGateBtn').addEventListener('click', () => {
