@@ -63,6 +63,13 @@ let chosenLanUrl = null; // IP choisie par l'opérateur dans la régie
 // depuis la tablette de l'animateur, qui survit alors aux redémarrages du serveur).
 let animatorControl = /^(1|true|on|oui)$/i.test(process.env.ANIMATOR_CONTROL || '');
 
+// Thème de l'écran de jeu affiché au public : 'dark' | 'light' | 'retro'.
+// Choisi depuis la régie ; persiste au chargement/à la remise à zéro.
+const THEMES = ['dark', 'light', 'retro'];
+let displayTheme = THEMES.includes((process.env.THEME || '').toLowerCase())
+  ? process.env.THEME.toLowerCase()
+  : 'dark';
+
 // Code d'accès des surfaces de CONTRÔLE (régie + animateur).
 // Défini par REGIE_CODE, sinon généré (6 chiffres aléatoires sûrs).
 const crypto = require('crypto');
@@ -539,6 +546,12 @@ const handlers = {
     animatorControl = !!p.on;
   },
 
+  // Thème de l'écran de jeu (sombre / clair / rétro).
+  setTheme(p) {
+    const t = (p && p.theme ? p.theme : '').toString();
+    if (THEMES.includes(t)) displayTheme = t;
+  },
+
   // ---- Gagnant ----
   setWinner(p) {
     state.winnerTeam = p.index === null ? null : Number(p.index);
@@ -614,11 +627,13 @@ function publicState() {
 /** Envoie l'état adapté au niveau d'accès du socket (complet si authentifié). */
 function sendStateTo(socket) {
   state.animatorControl = animatorControl;
+  state.theme = displayTheme;
   socket.emit('state', socket.data.authed ? state : publicState());
 }
 
 function broadcastState() {
   state.animatorControl = animatorControl;
+  state.theme = displayTheme;
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();

@@ -745,3 +745,131 @@ body {
   object-fit: contain;
   background: #000;
 }
+
+/* ================================================================== *
+ *  THÈMES DE L'ÉCRAN DE JEU (choisis en régie)
+ *  Le thème par défaut (sombre) = variables de base.css.
+ *  Seul l'écran de jeu pose data-theme ; la régie/animateur ne sont pas touchés.
+ * ================================================================== */
+
+/* ---------------- Clair : crème & or profond ---------------- */
+:root[data-theme='light'] {
+  --bg-0: #f4f1e6;
+  --bg-1: #e9e3d0;
+  --bg-2: #ddd5bd;
+  --panel: #fffdf5;
+  --panel-edge: #cdbd8c;
+  --white: #2a2205;          /* texte principal (encre foncée) */
+  --muted: #7a6f4a;
+  --gold-1: #b8860b;
+  --gold-2: #9a6f08;
+  --gold-3: #7a5a06;
+  --gold-grad: linear-gradient(180deg, #d4a017 0%, #b8860b 50%, #8a6608 100%);
+  --glow-gold: 0 0 14px rgba(184, 134, 11, 0.3);
+}
+:root[data-theme='light'] .team__score {
+  filter: drop-shadow(0 0 8px rgba(184, 134, 11, 0.35));
+}
+
+/* ---------------- Rétro 90s : kitsch fluo ---------------- */
+:root[data-theme='retro'] {
+  --bg-0: #2b0a4a;
+  --bg-1: #3a0e63;
+  --bg-2: #4a147e;
+  --panel: #1c1147;
+  --panel-edge: #00e5ff;
+  --white: #ffffff;
+  --muted: #ffd6f4;
+  --gold-1: #ffe600;
+  --gold-2: #ff2e88;
+  --gold-3: #00e5ff;
+  --gold-grad: linear-gradient(90deg, #ff2e88, #ffe600, #00e5ff, #ff2e88);
+  --glow-gold: 0 0 18px rgba(255, 46, 136, 0.75);
+  /* Comic Sans : la police kitsch par excellence (système, pas de chargement). */
+  --font-display: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Marker Felt', cursive;
+  --font-body: 'Comic Sans MS', 'Comic Sans', 'Chalkboard SE', 'Marker Felt', cursive;
+}
+/* Fond zébré fluo façon web 90s */
+[data-theme='retro'] .studio-bg {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 46, 136, 0.14) 0 22px, transparent 22px 44px),
+    repeating-linear-gradient(-45deg, rgba(0, 229, 255, 0.12) 0 22px, transparent 22px 44px),
+    radial-gradient(circle at 50% 0%, #4a147e 0%, #2b0a4a 70%);
+}
+[data-theme='retro'] .studio-bg::after {
+  opacity: 0.25;
+}
+/* Textes « WordArt » : dégradé arc-en-ciel qui défile */
+[data-theme='retro'] .gold-text,
+[data-theme='retro'] .team__score,
+[data-theme='retro'] .pot__value {
+  background-size: 220% auto;
+  animation: retro-rainbow 3s linear infinite;
+}
+@keyframes retro-rainbow {
+  to {
+    background-position: 220% center;
+  }
+}
+/* Panneaux biseautés + ombres dures décalées */
+[data-theme='retro'] .team {
+  border: 4px solid var(--gold-1);
+  border-radius: 8px;
+  box-shadow: 6px 6px 0 #00e5ff;
+}
+[data-theme='retro'] .pot {
+  border: 4px solid var(--gold-1);
+  border-radius: 8px;
+  box-shadow: 6px 6px 0 #ff2e88;
+}
+[data-theme='retro'] .slot {
+  border: 4px solid #00e5ff;
+  border-radius: 6px;
+  box-shadow: 6px 6px 0 #ff2e88;
+  background: linear-gradient(180deg, #3a0e63, #2b0a4a);
+}
+[data-theme='retro'] .slot.revealed {
+  border-color: #ffe600;
+  box-shadow: 6px 6px 0 #ff2e88, 0 0 26px rgba(255, 230, 0, 0.7);
+}
+/* Pastilles de points : jaune vif, texte foncé, ombre magenta */
+[data-theme='retro'] .slot__points {
+  background: #ffe600;
+  color: #2b0a4a;
+  box-shadow: 3px 3px 0 #ff2e88;
+}
+/* Badges / bannières / bouton : solides et flashy (lisibles) */
+[data-theme='retro'] .round-badge,
+[data-theme='retro'] .final-active-banner,
+[data-theme='retro'] .bz-ribbon,
+[data-theme='retro'] .sound-gate__btn {
+  background: #ffe600;
+  color: #2b0a4a;
+  border: 3px solid #ff2e88;
+  box-shadow: 4px 4px 0 #00e5ff;
+  border-radius: 10px;
+}
+/* Étoiles du logo : lime clignotante */
+[data-theme='retro'] .logo-sub {
+  color: #39ff14;
+  animation: retro-blink 0.8s steps(2, jump-none) infinite;
+}
+@keyframes retro-blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+/* Question : contour BD multicolore */
+[data-theme='retro'] .question-text {
+  color: #ffe600;
+  text-shadow: 3px 3px 0 #ff2e88, -2px -2px 0 #00e5ff, 0 0 22px rgba(255, 46, 136, 0.6);
+}
+/* Cases de la finale biseautées */
+[data-theme='retro'] .fcell {
+  border: 3px solid #00e5ff;
+  border-radius: 8px;
+}
+[data-theme='retro'] .fcell.revealed {
+  border-color: #ffe600;
+  box-shadow: 4px 4px 0 #ff2e88;
+}

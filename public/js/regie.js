@@ -210,6 +210,11 @@ document.getElementById('animModeCtrl').addEventListener('click', () => cmd('set
   });
 })();
 
+// Thème de l'écran de jeu (sombre / clair / rétro)
+document.querySelectorAll('[data-theme-btn]').forEach((b) =>
+  b.addEventListener('click', () => cmd('setTheme', { theme: b.dataset.themeBtn }))
+);
+
 // Aide des raccourcis clavier
 const shortcutsOverlay = document.getElementById('shortcutsOverlay');
 const toggleShortcuts = (show) => {
@@ -298,11 +303,20 @@ function render() {
 
   renderStatusbar();
   renderAnimMode();
+  renderThemePicker();
   renderTeams();
   renderRounds();
   renderBoard();
   renderFinal();
   renderBuzzer();
+}
+
+// Sélecteur de thème : reflète le thème courant de l'écran de jeu.
+function renderThemePicker() {
+  const t = state.theme || 'dark';
+  document.querySelectorAll('[data-theme-btn]').forEach((b) =>
+    b.classList.toggle('active', b.dataset.themeBtn === t)
+  );
 }
 
 // Réglage des droits de l'animateur : reflète le mode courant.

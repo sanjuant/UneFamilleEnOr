@@ -61,6 +61,8 @@ document.getElementById('soundGateBtn').addEventListener('click', () => {
 // ---- Rendu ----
 function render(s) {
   cur = s;
+  // Thème choisi en régie (sombre / clair / rétro) appliqué à l'écran de jeu.
+  document.documentElement.setAttribute('data-theme', s.theme || 'dark');
   stage.dataset.view = s.view;
 
   // Titre / logo
