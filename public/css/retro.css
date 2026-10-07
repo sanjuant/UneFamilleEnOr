@@ -368,6 +368,21 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+/* Plateau et finale : une seule grille d'ampoules par écran, calée sur la hauteur
+   des panneaux (et non sur la taille du texte) ; les réponses longues sont
+   resserrées horizontalement par display.js (fitLamps), pas rapetissées. */
+[data-theme='retro'] :is(.slot__text, .slot__points) {
+  --pitch: max(2.5px, 0.5cqi); /* ~6 ampoules par lettre pour ~24 caractères */
+}
+[data-theme='retro'] :is(.fcell .ftext, .fcell .fpts) {
+  --pitch: max(2.5px, 8.5cqh);
+}
+[data-theme='retro'] :is(.slot__text, .slot__points, .fcell .ftext, .fcell .fpts) {
+  -webkit-mask-size: var(--pitch) var(--pitch);
+  mask-size: var(--pitch) var(--pitch);
+  -webkit-mask-repeat: space; /* pas constant, ampoules jamais coupées au bord */
+  mask-repeat: space;
+}
 /* Chaque lettre s'allume l'une après l'autre (ampoules qui chauffent) */
 [data-theme='retro'] .lamps {
   display: flex;
@@ -375,6 +390,27 @@
   justify-content: center;
   white-space: nowrap;
   text-overflow: clip;
+}
+[data-theme='retro'] .lamps__line {
+  flex: none;
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
+  transform-origin: center;
+}
+/* Réponse trop longue pour une ligne lisible : coupée à l'espace le plus central */
+[data-theme='retro'] .lamp-br {
+  display: none;
+}
+[data-theme='retro'] .lamps__line--2 {
+  font-size: 0.8em;
+  line-height: 1.06;
+}
+[data-theme='retro'] .lamps__line--2 .lamp-br {
+  display: block;
+}
+[data-theme='retro'] .lamps__line--2 .lamp--brk {
+  display: none;
 }
 [data-theme='retro'] .lamp {
   display: inline-block;
@@ -678,12 +714,12 @@
 [data-theme='retro'] .slot__text {
   flex: 1;
   min-width: 0;
-  font-size: min(calc(118cqi / var(--n, 8)), 50cqh);
+  font-size: 44cqh; /* même hauteur de lettres sur tous les panneaux */
 }
 [data-theme='retro'] .slot__points {
   display: grid;
   place-items: center;
-  min-width: 2.2ch;
+  min-width: calc(2ch + 0.32em); /* toujours la largeur de 2 chiffres (interlettrage compris) */
   margin: 0;
   padding: 0 0.12em;
   font-size: 92cqh; /* VT323 : chiffres petits dans leur cadratin */
@@ -771,12 +807,12 @@
 [data-theme='retro'] .fcell .ftext {
   flex: 1;
   min-width: 0;
-  font-size: min(calc(112cqi / var(--n, 8)), 74cqh);
+  font-size: 70cqh;
 }
 [data-theme='retro'] .fcell .fpts {
   display: grid;
   place-items: center;
-  min-width: 2.2ch;
+  min-width: calc(2ch + 0.28em);
   margin: 0;
   padding: 0 0.1em;
   font-size: 92cqh; /* VT323 : chiffres petits dans leur cadratin */

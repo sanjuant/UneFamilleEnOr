@@ -215,6 +215,7 @@ function render(s) {
   renderWinner(s);
   renderBuzzer(s);
   renderJoinQR(s);
+  fitLamps();
 
   prev = s;
 }
@@ -273,17 +274,57 @@ function setAnswerText(el, text) {
     return;
   }
   el.classList.add('lamps');
-  el.textContent = '';
+  // Une ligne qui porte les lettres : fitLamps() la resserre, ou la coupe en deux,
+  // si la réponse est trop longue.
+  const line = document.createElement('span');
+  line.className = 'lamps__line';
   const chars = [...String(text)];
-  el.style.setProperty('--n', chars.length || 1); // sert à dimensionner le texte pour tenir sur 1 ligne
+  // Point de coupure éventuel : l'espace qui équilibre le mieux les deux lignes.
+  let brk = -1;
+  let best = Infinity;
+  chars.forEach((ch, i) => {
+    const cost = Math.max(i, chars.length - i - 1);
+    if (ch === ' ' && cost < best) {
+      best = cost;
+      brk = i;
+    }
+  });
   chars.forEach((ch, i) => {
     const s = document.createElement('span');
-    s.className = 'lamp';
+    s.className = i === brk ? 'lamp lamp--brk' : 'lamp';
     s.style.setProperty('--i', i);
     s.textContent = ch === ' ' ? ' ' : ch;
-    el.appendChild(s);
+    line.appendChild(s);
+    if (i === brk) {
+      const br = document.createElement('span');
+      br.className = 'lamp-br';
+      line.appendChild(br);
+    }
+  });
+  el.replaceChildren(line);
+}
+
+// Afficheur à ampoules : la grille a un pas fixe sur tout l'écran (comme un vrai
+// tableau), elle ne suit pas la taille du texte. Une réponse trop longue est
+// resserrée horizontalement ; au-delà d'un resserrement lisible, elle passe sur
+// deux lignes (plateau seulement : les cases de la finale sont trop basses).
+const LAMP_MIN_SQUEEZE = 0.72;
+function fitLamps() {
+  document.querySelectorAll('.lamps__line').forEach((line) => {
+    line.style.transform = '';
+    line.classList.remove('lamps__line--2');
+    const avail = line.parentElement.clientWidth * 0.94; // une colonne d'ampoules de marge
+    if (!avail || !line.offsetWidth) return; // vue masquée : mesure refaite à son affichage
+    let k = avail / line.offsetWidth; // offsetWidth = largeur hors transform
+    if (k < LAMP_MIN_SQUEEZE && line.querySelector('.lamp-br') && line.closest('.slot')) {
+      line.classList.add('lamps__line--2');
+      k = avail / line.offsetWidth;
+    }
+    if (k < 1) line.style.transform = `scale(${k}, ${Math.min(1, k / LAMP_MIN_SQUEEZE)})`;
   });
 }
+window.addEventListener('resize', fitLamps);
+document.fonts.ready.then(fitLamps);
 
 function renderBoard(board) {
   const el = document.getElementById('board');
