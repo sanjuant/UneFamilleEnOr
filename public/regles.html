@@ -30,6 +30,17 @@
     ul.tips { list-style: none; display: grid; gap: 8px; }
     ul.tips li { position: relative; padding-left: 28px; color: var(--muted); line-height: 1.5; }
     ul.tips li::before { content: '💡'; position: absolute; left: 0; }
+    .example { background: rgba(245,197,24,.07); border: 1px solid var(--gold-3); border-left: 4px solid var(--gold-2); border-radius: 10px; padding: 12px 16px; margin: 6px 0 14px; }
+    .example__t { text-transform: uppercase; letter-spacing: 2px; font-size: 12px; color: var(--gold-2); font-weight: 700; margin-bottom: 6px; }
+    .section .example p { margin: 0; }
+    ul.app { list-style: none; display: grid; gap: 8px; }
+    ul.app li { position: relative; padding: 10px 14px 10px 44px; background: rgba(108,164,255,.08); border: 1px solid rgba(108,164,255,.35); border-radius: 10px; line-height: 1.55; }
+    ul.app li::before { content: '🖥️'; position: absolute; left: 13px; top: 10px; }
+    kbd { font-family: var(--font-body); font-size: .85em; font-weight: 700; color: var(--gold-1); background: var(--bg-0); border: 1px solid var(--panel-edge); border-bottom-width: 2px; border-radius: 5px; padding: 0 6px; }
+    .faq { display: grid; gap: 10px; }
+    .faq__item { background: rgba(5,11,34,.5); border: 1px solid var(--panel-edge); border-radius: 10px; padding: 12px 16px; }
+    .faq dt { font-weight: 700; color: var(--gold-1); margin-bottom: 4px; line-height: 1.45; }
+    .faq dd { margin: 0; line-height: 1.55; }
     .footnote { color: var(--muted); font-size: 13px; margin-top: 30px; text-align: center; }
     .footnote a { color: var(--gold-2); }
   </style>
@@ -68,11 +79,20 @@
       el.id = id;
       let html = `<h2><span class="ic">${sec.icon || ''}</span> ${sec.title}</h2>`;
       (sec.paragraphs || []).forEach((p) => (html += `<p>${p}</p>`));
+      if (sec.example) {
+        html += `<div class="example"><div class="example__t">${sec.example.title}</div><p>${sec.example.html}</p></div>`;
+      }
       if (sec.steps && sec.steps.length) {
         html += `<div class="block-title">Déroulé</div><ol class="steps">${sec.steps.map((s) => `<li>${s}</li>`).join('')}</ol>`;
       }
+      if (sec.app && sec.app.length) {
+        html += `<div class="block-title">Dans l'application</div><ul class="app">${sec.app.map((a) => `<li>${a}</li>`).join('')}</ul>`;
+      }
       if (sec.tips && sec.tips.length) {
         html += `<div class="block-title">Conseils d'animation</div><ul class="tips">${sec.tips.map((t) => `<li>${t}</li>`).join('')}</ul>`;
+      }
+      if (sec.faq && sec.faq.length) {
+        html += `<dl class="faq">${sec.faq.map((f) => `<div class="faq__item"><dt>${f.q}</dt><dd>${f.a}</dd></div>`).join('')}</dl>`;
       }
       el.innerHTML = html;
       cont.appendChild(el);
