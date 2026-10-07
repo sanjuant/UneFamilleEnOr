@@ -268,6 +268,10 @@ document.getElementById('revealAllBtn').addEventListener('click', () => {
 });
 document.getElementById('awardA').addEventListener('click', () => award(0));
 document.getElementById('awardB').addEventListener('click', () => award(1));
+// Équipe qui a la main : déduite du buzz, corrigeable (face-à-face gagné par l'autre équipe, passe…).
+document.querySelectorAll('[data-main]').forEach((b) =>
+  b.addEventListener('click', () => cmd('setActiveTeam', { index: Number(b.dataset.main) }))
+);
 
 // Cagnotte vers le score d'une équipe : son des points + applaudissements.
 function award(index) {
@@ -365,8 +369,11 @@ document.addEventListener('keydown', (e) => {
   if (k === '?' || k === 'h' || k === 'H') return toggleShortcuts(), e.preventDefault();
   if (k === 'Escape') return toggleShortcuts(false);
 
+  // Manche finale à l'écran : Entrée, Espace et 1…9 pilotent l'assistant.
+  if (state && state.view === 'final' && state.finalState && finalShortcut(k)) return e.preventDefault();
+
   // Révéler/masquer une réponse du plateau
-  if (/^[1-9]$/.test(k) && state && state.board) {
+  if (/^[1-9]$/.test(k) && state && state.board && state.view !== 'final') {
     const i = Number(k) - 1;
     const a = state.board.answers[i];
     if (a) {
@@ -529,7 +536,7 @@ function renderBuzzer() {
   if (st) {
     if (bz.winner !== null && bz.winner !== undefined) {
       const t = state.teams[bz.winner];
-      st.textContent = `✋ ${t ? t.name : 'Équipe ' + (bz.winner + 1)} a buzzé en premier — à elle de jouer !`;
+      st.textContent = `✋ ${t ? t.name : 'Équipe ' + (bz.winner + 1)} a buzzé en premier : elle répond d'abord. La main va à la réponse la mieux classée (corrigez « La main » sur le plateau si besoin).`;
       st.className = 'buzz-state winner';
     } else if (bz.armed) {
       st.textContent = '🟢 Buzzers armés — en attente du premier buzz…';
@@ -672,6 +679,11 @@ function renderBoard() {
   const aB = document.getElementById('awardB');
   if (aA) aA.classList.toggle('active', act === 0);
   if (aB) aB.classList.toggle('active', act === 1);
+  document.querySelectorAll('[data-main]').forEach((b) => {
+    const i = Number(b.dataset.main);
+    b.textContent = state.teams[i] ? state.teams[i].name : `Équipe ${i + 1}`;
+    b.classList.toggle('active', act === i);
+  });
 
   const ctrl = document.getElementById('answersCtrl');
   const sig = board.question + '#' + board.answers.length;
@@ -710,23 +722,30 @@ function renderBoard() {
   });
 }
 
-const FINAL_STEPS = [
-  'Finaliste 1 répond à toutes les questions (lancez le chrono)',
-  'Saisissez ses réponses + points dans la colonne « Finaliste 1 »',
-  'Révélez ses réponses, puis masquez-les avant le finaliste 2',
-  'Finaliste 2 répond aux mêmes questions (sans répéter — sinon « Doublon »)',
-  'Révélation finale → comparez le total à l’objectif',
+// ------------------------------------------------------------------ //
+//  Manche finale : assistant pas à pas
+// ------------------------------------------------------------------ //
+// Mêmes étapes que FINAL_PHASES côté serveur.
+const FINAL_PHASES = [
+  { id: 'setup', label: 'Préparation' },
+  { id: 'answer1', label: 'Finaliste 1 répond' },
+  { id: 'reveal1', label: 'Ses réponses' },
+  { id: 'answer2', label: 'Finaliste 2 répond' },
+  { id: 'reveal2', label: 'Révélation finale' },
 ];
 
-/** Étape du guide déduite de l'état (1..5), sans dépendre du serveur. */
-function computeFinalStep(fs) {
-  const allRevealed = fs.cells.every((p) => p[0].revealed && p[1].revealed);
-  if (allRevealed) return 5;
-  if (fs.activePlayer === 1) return 4;
-  if (fs.cells.some((p) => p[0].revealed)) return 3;
-  if (fs.cells.some((p) => p[0].answer)) return 2;
-  return 1;
-}
+// Saisie en direct (état propre à cette régie) : question en cours, questions
+// « passées » par chaque finaliste, points corrigés à la main.
+let fCursor = 0;
+let fCursorKey = '';
+const fSkipped = [new Set(), new Set()];
+let fPointsTouched = false;
+
+const finalPhase = (fs) => fs.phase || 'setup';
+const finalCol = (fs) => (['answer2', 'reveal2'].includes(finalPhase(fs)) ? 1 : 0);
+const finalistName = (fs, i) => (fs.finalistNames && fs.finalistNames[i]) || `Finaliste ${i + 1}`;
+const hasAnswer = (c) => !!(c && c.answer && c.answer.trim());
+const ptsLabel = (n) => `${n} pt${n > 1 ? 's' : ''}`;
 
 function finalTimerRemaining(t) {
   if (!t) return 0;
@@ -745,28 +764,59 @@ function renderFinal() {
 
   if (!fs) {
     ctrl.innerHTML =
-      '<p class="final-hint">Cliquez sur « Démarrer la manche finale ». Les 2 finalistes répondent aux <b>mêmes questions</b>, l’un après l’autre ; l’objectif est d’atteindre la cible de points (200 par défaut).</p>';
+      '<p class="final-hint">Cliquez sur « Démarrer la manche finale » : un assistant vous guide ensuite étape par étape (préparation, réponses du finaliste 1, révélation, réponses du finaliste 2, révélation finale).</p>';
     finalLen = -1;
     startBtn.textContent = '▶ Démarrer la manche finale';
+    startBtn.classList.add('btn--gold');
     return;
   }
-  startBtn.textContent = '↻ Redémarrer la manche finale';
+  startBtn.textContent = '↻ Recommencer la finale';
+  startBtn.classList.remove('btn--gold');
 
   if (fs.cells.length !== finalLen) {
+    const firstShow = finalLen === -1;
     finalLen = fs.cells.length;
+    fCursorKey = '';
     ctrl.innerHTML = buildFinalScaffold(fs);
-    wireFinalScaffold();
+    wireFinalScaffold(ctrl);
     wireFinalCells(ctrl);
     wireFinalChips(ctrl);
+    // La carte est en bas de la page : on l'amène à l'écran quand la finale commence.
+    if (firstShow) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  updateFinalWizard(fs, ctrl);
   updateFinalLive(fs, ctrl);
 }
 
 function buildFinalScaffold(fs) {
-  const steps = FINAL_STEPS.map(
-    (s, i) => `<li data-step="${i + 1}"><span class="fs-num">${i + 1}</span>${s}</li>`
+  const steps = FINAL_PHASES.map(
+    (p, i) =>
+      `<button class="fw-step" data-goto="${p.id}"><span class="fw-step__n">${i + 1}</span><span class="fw-step__l" data-step-label="${p.id}">${p.label}</span></button>`
   ).join('');
 
+  const revealRows = (withFirst) =>
+    fs.questions
+      .map(
+        (q, qi) => `
+        <li class="fw-rrow" data-q="${qi}">
+          <span class="fw-rrow__n">Q${qi + 1}</span>
+          <span class="fw-rrow__q">${escapeHtml(q.question)}</span>
+          ${withFirst ? '<span class="fw-rrow__first" data-first></span>' : ''}
+          <span class="fw-rrow__a" data-ans></span>
+          <input type="number" class="fw-rrow__pts" min="0" data-pts title="Points (modifiables)" />
+          <button class="btn fw-rrow__btn" data-rev></button>
+        </li>`
+      )
+      .join('');
+
+  const qlist = fs.questions
+    .map(
+      (q, qi) =>
+        `<li data-q="${qi}"><span class="fw-ql__n">Q${qi + 1}</span><span class="fw-ql__q">${escapeHtml(q.question)}</span><span class="fw-ql__a" data-ql-ans></span></li>`
+    )
+    .join('');
+
+  // Tableau complet (ancienne vue) : repli pour corriger n'importe quelle case.
   const questions = fs.questions
     .map((q, qi) => {
       const chips = (q.answers || [])
@@ -788,54 +838,97 @@ function buildFinalScaffold(fs) {
     .join('');
 
   return `
-    <div class="final-family">
-      <span class="ff-label">🏆 Famille en finale :</span>
-      <button class="btn pill" data-ffam="0"></button>
-      <button class="btn pill" data-ffam="1"></button>
-      <span class="ff-hint">(celle qui a gagné les manches)</span>
-    </div>
-
-    <div class="final-status">
-      <span class="fstat-label">Au tour de :</span>
-      <div class="final-player-switch">
-        <button class="btn pill" data-fplayer="0">① Finaliste 1</button>
-        <button class="btn pill" data-fplayer="1">② Finaliste 2</button>
-      </div>
-      <span class="fstat-badge" id="fstatBadge"></span>
-    </div>
-
-    <div class="final-names">
-      <span class="ff-label">Noms des finalistes :</span>
-      <input type="text" class="fname-input" data-fn="0" placeholder="Finaliste 1" maxlength="24" />
-      <input type="text" class="fname-input" data-fn="1" placeholder="Finaliste 2" maxlength="24" />
-      <span class="ff-hint">(affichés sur l'écran de jeu)</span>
-    </div>
-
-    <ol class="final-steps" id="finalSteps">${steps}</ol>
-
-    <div class="final-toolbar">
-      <div class="final-timer" id="finalTimer">
-        <span class="ft-time" id="ftTime">--</span>
-        <button class="btn" id="ftStart" title="Lancer le chrono du finaliste en jeu">▶ Chrono</button>
-        <button class="btn" id="ftPause" title="Mettre en pause">⏸</button>
-        <button class="btn" id="ftReset" title="Réinitialiser le chrono">↺</button>
-      </div>
-      <button class="btn btn--gold" id="revealFinalAllBtn">👁️ Révélation finale</button>
-    </div>
+    <nav class="fw-steps">${steps}</nav>
 
     <div class="final-progress">
       <div class="fp-bar"><div class="fp-fill" id="fpFill"></div></div>
       <div class="fp-text" id="fpText"></div>
     </div>
 
-    <p class="final-note">💡 Cliquez une réponse, ou tapez-la : en sortant du champ, le <b>score se remplit automatiquement</b> si la réponse est dans la liste (sinon, saisissez les points à la main). Si le finaliste 2 redonne une réponse du finaliste 1, elle est <b>effacée (doublon)</b> avec un buzz — redemandez-en une autre.</p>
+    <section class="fw-panel" data-panel="setup">
+      <div class="final-family">
+        <span class="ff-label">🏆 Famille en finale :</span>
+        <button class="btn pill" data-ffam="0"></button>
+        <button class="btn pill" data-ffam="1"></button>
+        <span class="ff-hint">(présélection : la famille qui mène)</span>
+      </div>
+      <div class="final-names">
+        <span class="ff-label">Noms des finalistes :</span>
+        <input type="text" class="fname-input" data-fn="0" placeholder="Finaliste 1" maxlength="24" />
+        <input type="text" class="fname-input" data-fn="1" placeholder="Finaliste 2" maxlength="24" />
+        <span class="ff-hint">(affichés sur l'écran de jeu)</span>
+      </div>
+      <ul class="fw-facts">
+        <li><b>${fs.cells.length} questions</b>, les mêmes pour les deux finalistes</li>
+        <li>Objectif : <b>${fs.target} points</b> à eux deux</li>
+        <li>Chrono : <b>${fs.timers[0]} s</b> pour le 1er, <b>${fs.timers[1]} s</b> pour le 2e</li>
+      </ul>
+      <p class="fw-callout">🎧 Isolez le 2e finaliste (coulisses, casque) : il ne doit entendre ni les questions ni les réponses du 1er.</p>
+      <div class="fw-foot">
+        <span class="fw-foot__hint">Raccourci : <kbd>Entrée</kbd></span>
+        <button class="btn btn--gold fw-big" id="fwStart">▶ C'est parti : <span data-fname="0"></span> répond</button>
+      </div>
+    </section>
 
-    <div class="fq-colheads">
-      <span id="fhead0">Finaliste 1</span>
-      <span id="fhead1">Finaliste 2</span>
-    </div>
+    <section class="fw-panel" data-panel="answer">
+      <div class="fw-head">
+        <div class="fw-who"><span class="fw-who__k">Au micro</span><span class="fw-who__v" id="fwWho"></span></div>
+        <div class="final-timer fw-timer" id="finalTimer">
+          <span class="ft-time" id="ftTime">--</span>
+          <button class="btn btn--gold" id="ftStart" title="Lancer le chrono (Espace)">▶ Lancer le chrono</button>
+          <button class="btn" id="ftPause" title="Pause (Espace)">⏸</button>
+          <button class="btn" id="ftReset" title="Remettre le chrono à zéro">↺</button>
+        </div>
+      </div>
+      <div class="fw-timeup" id="fwTimeUp" hidden>⌛ Temps écoulé : passez à la révélation des réponses.</div>
+      <div class="fw-entry">
+        <div class="fw-q"><span class="fw-q__n" id="fwQNum"></span><span class="fw-q__t" id="fwQText"></span></div>
+        <div class="fw-first" id="fwFirst" hidden></div>
+        <div class="fw-chips" id="fwChips"></div>
+        <div class="fw-input">
+          <input type="text" id="fwAnswer" autocomplete="off" spellcheck="false" placeholder="Réponse du finaliste, puis Entrée" />
+          <input type="number" id="fwPoints" min="0" placeholder="pts" title="Points : remplis automatiquement si la réponse est au tableau" />
+          <button class="btn btn--gold" id="fwValidate">✓ Valider</button>
+          <button class="btn" id="fwSkip" title="Le finaliste passe : on y revient s'il reste du temps">⏭ Passer</button>
+          <button class="btn btn--x" id="fwDup" title="Réponse déjà donnée par le 1er finaliste : buzz, on redemande">⛔ Doublon</button>
+        </div>
+        <div class="fw-match" id="fwMatch"></div>
+      </div>
+      <ol class="fw-qlist" id="fwQList">${qlist}</ol>
+      <div class="fw-foot">
+        <span class="fw-foot__hint" id="fwAnswerHint"></span>
+        <button class="btn btn--gold fw-big" id="fwToReveal"></button>
+      </div>
+    </section>
 
-    <div class="final-questions">${questions}</div>`;
+    <section class="fw-panel" data-panel="reveal1">
+      <p class="fw-lead">L'animateur reprend chaque réponse : révélez-la quand il demande le score.</p>
+      <ol class="fw-rlist">${revealRows(false)}</ol>
+      <div class="fw-foot">
+        <span class="fw-foot__hint" id="fwR1Hint"></span>
+        <button class="btn btn--gold fw-big" id="fwR1Next"></button>
+      </div>
+    </section>
+
+    <section class="fw-panel" data-panel="reveal2">
+      <p class="fw-lead" id="fwR2Lead"></p>
+      <ol class="fw-rlist">${revealRows(true)}</ol>
+      <div class="fw-verdict" id="fwVerdict"></div>
+      <div class="fw-foot">
+        <button class="btn" id="revealFinalAllBtn">👁️ Tout révéler d'un coup</button>
+        <button class="btn btn--gold fw-big" id="fwR2Next"></button>
+      </div>
+    </section>
+
+    <details class="fw-manual">
+      <summary>✏️ Tableau complet : corriger une réponse ou des points</summary>
+      <p class="final-note">💡 Cliquez une réponse, ou tapez-la : en sortant du champ, le <b>score se remplit automatiquement</b> si la réponse est dans la liste. Les propositions vont au finaliste en jeu.</p>
+      <div class="fq-colheads">
+        <span id="fhead0">Finaliste 1</span>
+        <span id="fhead1">Finaliste 2</span>
+      </div>
+      <div class="final-questions">${questions}</div>
+    </details>`;
 }
 
 function finalCellHtml(q, col) {
@@ -856,30 +949,56 @@ const normAns = (s) =>
   (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 /**
- * À la sortie du champ : score automatique si la réponse est une proposition,
- * et nettoyage si c'est un doublon du finaliste 1.
+ * Réponse attendue correspondant à un texte saisi : égalité (accents et casse
+ * ignorés), sinon inclusion dans un seul sens ou l'autre (« pentest » ≈
+ * « Test d'intrusion (pentest) »), à condition qu'une seule proposition colle.
+ */
+function finalMatch(q, text) {
+  const props = (state.finalState.questions[q] && state.finalState.questions[q].answers) || [];
+  const t = normAns(text);
+  if (!t) return null;
+  const exact = props.findIndex((a) => normAns(a.text) === t);
+  if (exact >= 0) return { i: exact, a: props[exact], exact: true };
+  if (t.length < 3) return null;
+  const close = props
+    .map((a, i) => ({ a, i, n: normAns(a.text) }))
+    .filter(({ n }) => n.includes(t) || t.includes(n));
+  return close.length === 1 ? { i: close[0].i, a: close[0].a, exact: false } : null;
+}
+
+/** Doublon : même texte que le finaliste 1, ou même réponse du tableau. */
+function isFinalDuplicate(q, text) {
+  const first = state.finalState.cells[q][0].answer;
+  if (!normAns(first) || !normAns(text)) return false;
+  if (normAns(first) === normAns(text)) return true;
+  const a = finalMatch(q, text);
+  const b = finalMatch(q, first);
+  return !!(a && b && a.i === b.i);
+}
+
+/**
+ * Tableau complet, à la sortie du champ : score automatique si la réponse est
+ * une proposition, et nettoyage si c'est un doublon du finaliste 1.
  */
 function commitFinalAnswer(q, col, answerText) {
   const fs = state.finalState;
   if (!fs) return;
-  const ans = normAns(answerText);
-  if (!ans) return;
-  if (col === 1 && ans === normAns(fs.cells[q][0].answer)) {
+  if (!normAns(answerText)) return;
+  if (col === 1 && isFinalDuplicate(q, answerText)) {
     clearFinalCell(q, col);
     return;
   }
   // Score auto seulement si aucun point n'a déjà été saisi (n'écrase pas un choix manuel).
-  const props = (fs.questions[q] && fs.questions[q].answers) || [];
-  const match = props.find((a) => normAns(a.text) === ans);
+  const match = finalMatch(q, answerText);
   const current = Number(fs.cells[q][col].points) || 0;
-  if (match && current === 0) cmd('setFinalCell', { q, col, points: match.points || 0 });
+  if (match && current === 0) cmd('setFinalCell', { q, col, points: match.a.points || 0 });
 }
 
 function clearFinalCell(q, col) {
   cmd('setFinalCell', { q, col, answer: '', points: 0 });
   cmd('revealFinalCell', { q, col, revealed: false });
   sound('buzzer');
-  showFinalToast('⛔ Doublon ! Réponse effacée — demandez-en une autre.');
+  showFinalToast('⛔ Doublon ! Réponse effacée : demandez-en une autre.');
 }
 
 let finalToastTimer;
@@ -897,17 +1016,227 @@ function showFinalToast(msg) {
   finalToastTimer = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
-function wireFinalScaffold() {
-  document.querySelectorAll('[data-fplayer]').forEach((b) =>
-    b.addEventListener('click', () => cmd('setFinalPlayer', { player: Number(b.dataset.fplayer) }))
+// ---- Assistant : saisie des réponses ----
+
+/** Prochaine question à saisir après `from` : d'abord les vides, puis les « passées ». */
+function nextFinalQuestion(fs, col, from, justFilled = -1) {
+  const n = fs.cells.length;
+  const empty = (q) => q !== justFilled && !hasAnswer(fs.cells[q][col]);
+  for (const withSkipped of [false, true]) {
+    for (let k = 1; k <= n; k++) {
+      const q = (((from + k) % n) + n) % n;
+      if (empty(q) && (withSkipped || !fSkipped[col].has(q))) return q;
+    }
+  }
+  return from < 0 ? 0 : from; // tout est saisi : on reste où l'on est
+}
+
+/** Affiche la question en cours : énoncé, propositions, réponse déjà saisie. */
+function loadFinalCursor(fs, col) {
+  const q = fCursor;
+  const qd = fs.questions[q] || { question: '', answers: [] };
+  document.getElementById('fwQNum').textContent = `Q${q + 1} / ${fs.cells.length}`;
+  document.getElementById('fwQText').textContent = qd.question;
+  const chips = document.getElementById('fwChips');
+  chips.innerHTML = (qd.answers || [])
+    .map((a, i) => `<button class="fchip" data-i="${i}">${escapeHtml(a.text)} <b>${a.points}</b></button>`)
+    .join('');
+  chips.querySelectorAll('.fchip').forEach((b) =>
+    b.addEventListener('click', () => {
+      const a = qd.answers[Number(b.dataset.i)];
+      validateFinalAnswer(a.text, a.points || 0);
+    })
   );
-  document.getElementById('ftStart').addEventListener('click', () => cmd('startFinalTimer', {}));
+  const c = fs.cells[q][col];
+  document.getElementById('fwAnswer').value = c.answer || '';
+  document.getElementById('fwPoints').value = hasAnswer(c) ? c.points || 0 : '';
+  fPointsTouched = false;
+  updateFinalMatch();
+}
+
+/** Aide en direct sous le champ : réponse reconnue, doublon, ou absente du tableau. */
+function updateFinalMatch() {
+  const fs = state.finalState;
+  if (!fs) return;
+  const col = finalCol(fs);
+  const text = document.getElementById('fwAnswer').value;
+  const typed = !!text.trim();
+  const m = typed ? finalMatch(fCursor, text) : null;
+  const dup = typed && col === 1 && isFinalDuplicate(fCursor, text);
+  if (!fPointsTouched) document.getElementById('fwPoints').value = typed ? (m ? m.a.points : 0) : '';
+  document.querySelectorAll('#fwChips .fchip').forEach((b) =>
+    b.classList.toggle('match', !!m && Number(b.dataset.i) === m.i)
+  );
+  const hint = document.getElementById('fwMatch');
+  hint.className = 'fw-match' + (dup ? ' dup' : m ? ' ok' : typed ? ' miss' : '');
+  hint.textContent = !typed
+    ? 'Cliquez une proposition, ou tapez la réponse puis Entrée.'
+    : dup
+      ? `⛔ Doublon : ${finalistName(fs, 0)} a déjà donné cette réponse.`
+      : m
+        ? `${m.exact ? '✓' : '≈'} ${m.a.text} : ${ptsLabel(m.a.points)}`
+        : 'Pas au tableau : 0 point (ou saisissez les points à la main).';
+}
+
+function focusFinalAnswer() {
+  const inp = document.getElementById('fwAnswer');
+  if (inp) inp.focus();
+}
+
+/** Enregistre la réponse de la question en cours et passe à la suivante. */
+function validateFinalAnswer(text, points) {
+  const fs = state.finalState;
+  if (!fs) return;
+  const col = finalCol(fs);
+  const q = fCursor;
+  const answer = (text || '').trim();
+  if (!answer) return;
+  if (col === 1 && isFinalDuplicate(q, answer)) return flagFinalDuplicate();
+  let pts = points;
+  if (pts === undefined) {
+    const raw = document.getElementById('fwPoints').value;
+    const m = finalMatch(q, answer);
+    pts = fPointsTouched && raw !== '' ? Number(raw) : m ? m.a.points : 0;
+  }
+  cmd('setFinalCell', { q, col, answer, points: Math.max(0, Number(pts) || 0) });
+  fSkipped[col].delete(q);
+  fCursor = nextFinalQuestion(fs, col, q, q);
+  loadFinalCursor(fs, col);
+  focusFinalAnswer();
+}
+
+/** Doublon : buzz, on vide la réponse et on reste sur la question. */
+function flagFinalDuplicate() {
+  const fs = state.finalState;
+  const c = fs.cells[fCursor][1];
+  if (hasAnswer(c)) clearFinalCell(fCursor, 1);
+  else {
+    sound('buzzer');
+    showFinalToast('⛔ Doublon ! Demandez une autre réponse.');
+  }
+  document.getElementById('fwAnswer').value = '';
+  fPointsTouched = false;
+  updateFinalMatch();
+  focusFinalAnswer();
+}
+
+function skipFinalQuestion() {
+  const fs = state.finalState;
+  const col = finalCol(fs);
+  if (!hasAnswer(fs.cells[fCursor][col])) fSkipped[col].add(fCursor);
+  fCursor = nextFinalQuestion(fs, col, fCursor);
+  loadFinalCursor(fs, col);
+  updateFinalWizard(fs, document.getElementById('finalCtrl'));
+  focusFinalAnswer();
+}
+
+function toggleFinalTimer() {
+  const t = state.finalState && state.finalState.timer;
+  if (t && t.running) cmd('pauseFinalTimer');
+  else cmd('startFinalTimer', {});
+}
+
+// ---- Assistant : révélations ----
+
+function revealFinalCellWithSound(q, col, revealed) {
+  const c = state.finalState.cells[q][col];
+  cmd('revealFinalCell', { q, col, revealed });
+  if (revealed) sound((Number(c.points) || 0) > 0 ? 'reveal' : 'wrong');
+}
+
+/** Révèle la prochaine case cachée du finaliste `col` ; false s'il n'y en a plus. */
+function revealFinalNext(col) {
+  const q = state.finalState.cells.findIndex((p) => !p[col].revealed);
+  if (q < 0) return false;
+  revealFinalCellWithSound(q, col, true);
+  return true;
+}
+
+function goFinalPhase(phase) {
+  cmd('setFinalPhase', { phase });
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+
+function wireFinalScaffold(ctrl) {
+  ctrl.querySelectorAll('.fw-step').forEach((b) =>
+    b.addEventListener('click', () => goFinalPhase(b.dataset.goto))
+  );
+  document.getElementById('fwStart').addEventListener('click', () => {
+    cmd('setView', { view: 'final' });
+    goFinalPhase('answer1');
+  });
+
+  // Saisie
+  document.getElementById('ftStart').addEventListener('click', () => {
+    cmd('startFinalTimer', {});
+    focusFinalAnswer(); // on enchaîne directement sur la saisie
+  });
   document.getElementById('ftPause').addEventListener('click', () => cmd('pauseFinalTimer'));
   document.getElementById('ftReset').addEventListener('click', () => cmd('resetFinalTimer'));
+  const ans = document.getElementById('fwAnswer');
+  ans.addEventListener('input', updateFinalMatch);
+  ans.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      validateFinalAnswer(ans.value);
+    }
+  });
+  const pts = document.getElementById('fwPoints');
+  pts.addEventListener('input', () => (fPointsTouched = pts.value !== ''));
+  pts.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      validateFinalAnswer(ans.value);
+    }
+  });
+  document.getElementById('fwValidate').addEventListener('click', () => validateFinalAnswer(ans.value));
+  document.getElementById('fwSkip').addEventListener('click', skipFinalQuestion);
+  document.getElementById('fwDup').addEventListener('click', flagFinalDuplicate);
+  ctrl.querySelectorAll('#fwQList li').forEach((li) =>
+    li.addEventListener('click', () => {
+      const fs = state.finalState;
+      fCursor = Number(li.dataset.q);
+      loadFinalCursor(fs, finalCol(fs));
+      updateFinalWizard(fs, ctrl);
+      focusFinalAnswer();
+    })
+  );
+  document.getElementById('fwToReveal').addEventListener('click', () =>
+    goFinalPhase(finalCol(state.finalState) ? 'reveal2' : 'reveal1')
+  );
+
+  // Révélations (case par case, ou bouton « suivante »)
+  ['reveal1', 'reveal2'].forEach((panelId, col) => {
+    const panel = ctrl.querySelector(`.fw-panel[data-panel="${panelId}"]`);
+    panel.querySelectorAll('.fw-rrow').forEach((row) => {
+      const q = Number(row.dataset.q);
+      row.querySelector('[data-rev]').addEventListener('click', () =>
+        revealFinalCellWithSound(q, col, !state.finalState.cells[q][col].revealed)
+      );
+      row.querySelector('[data-pts]').addEventListener('input', (e) =>
+        cmd('setFinalCell', { q, col, points: Math.max(0, Number(e.target.value) || 0) })
+      );
+    });
+  });
+  document.getElementById('fwR1Next').addEventListener('click', () => {
+    if (!revealFinalNext(0)) goFinalPhase('answer2');
+  });
+  document.getElementById('fwR2Next').addEventListener('click', () => {
+    const fs = state.finalState;
+    if (fs.concealFirst) {
+      // On rappelle d'abord le score du finaliste 1, puis on dévoile le 2e.
+      cmd('setConcealFirst', { on: false });
+      sound('points');
+    } else if (!revealFinalNext(1)) {
+      cmd('setWinner', { index: fs.familyIndex });
+    }
+  });
   document.getElementById('revealFinalAllBtn').addEventListener('click', () => {
     cmd('revealFinalAll');
     sound('reveal');
   });
+
+  // Préparation
   document.querySelectorAll('[data-ffam]').forEach((b) =>
     b.addEventListener('click', () => cmd('setFinalFamily', { index: Number(b.dataset.ffam) }))
   );
@@ -918,9 +1247,164 @@ function wireFinalScaffold() {
   );
 }
 
-// Chips de réponses prédéfinies : remplit la cellule du finaliste EN JEU.
+/** Raccourcis de la finale (hors saisie) : Entrée = étape suivante, Espace = chrono, 1…9 = révéler. */
+function finalShortcut(k) {
+  const fs = state.finalState;
+  const phase = finalPhase(fs);
+  if (k === 'Enter') {
+    if (phase.startsWith('answer')) focusFinalAnswer();
+    else document.getElementById(phase === 'setup' ? 'fwStart' : phase === 'reveal1' ? 'fwR1Next' : 'fwR2Next').click();
+    return true;
+  }
+  if (k === ' ' && phase.startsWith('answer')) {
+    toggleFinalTimer();
+    return true;
+  }
+  if (/^[1-9]$/.test(k) && phase.startsWith('reveal')) {
+    const q = Number(k) - 1;
+    const col = finalCol(fs);
+    if (fs.cells[q]) revealFinalCellWithSound(q, col, !fs.cells[q][col].revealed);
+    return true;
+  }
+  return false;
+}
+
+function updateFinalWizard(fs, ctrl) {
+  const phase = finalPhase(fs);
+  const col = finalCol(fs);
+  const idx = FINAL_PHASES.findIndex((p) => p.id === phase);
+  const name0 = finalistName(fs, 0);
+  const name1 = finalistName(fs, 1);
+
+  ctrl.querySelectorAll('.fw-step').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+    b.classList.toggle('done', i < idx);
+  });
+  const labels = { answer1: `${name0} répond`, reveal1: `Réponses de ${name0}`, answer2: `${name1} répond` };
+  Object.entries(labels).forEach(([id, txt]) => {
+    const el = ctrl.querySelector(`[data-step-label="${id}"]`);
+    if (el) el.textContent = txt;
+  });
+  ctrl.querySelectorAll('[data-fname]').forEach((el) => (el.textContent = finalistName(fs, Number(el.dataset.fname))));
+
+  const panel = phase.startsWith('answer') ? 'answer' : phase;
+  ctrl.querySelectorAll('.fw-panel').forEach((p) => (p.hidden = p.dataset.panel !== panel));
+
+  if (phase === 'setup') {
+    // Finale (re)démarrée : on repart d'une saisie vierge.
+    fSkipped[0].clear();
+    fSkipped[1].clear();
+    fCursorKey = '';
+  } else if (panel === 'answer') updateFinalAnswerPanel(fs, col);
+  else updateFinalRevealPanel(fs, col);
+}
+
+function updateFinalAnswerPanel(fs, col) {
+  const n = fs.cells.length;
+  const key = `${col}|${n}`;
+  if (fCursorKey !== key) {
+    // Changement de finaliste : on démarre à la première question à saisir.
+    fCursorKey = key;
+    fCursor = nextFinalQuestion(fs, col, -1);
+    loadFinalCursor(fs, col);
+  }
+  document.getElementById('fwWho').textContent = finalistName(fs, col);
+  document.getElementById('fwDup').hidden = col !== 1;
+
+  // Repère des doublons : la réponse du finaliste 1 à la même question.
+  const first = document.getElementById('fwFirst');
+  const f = col === 1 ? fs.cells[fCursor][0] : null;
+  first.hidden = !hasAnswer(f);
+  if (hasAnswer(f)) first.textContent = `⚠ ${finalistName(fs, 0)} a répondu « ${f.answer} » : réponse interdite.`;
+  const taken = col === 1 && hasAnswer(f) ? finalMatch(fCursor, f.answer) : null;
+  document.querySelectorAll('#fwChips .fchip').forEach((b) =>
+    b.classList.toggle('taken', !!taken && Number(b.dataset.i) === taken.i)
+  );
+
+  document.querySelectorAll('#fwQList li').forEach((li) => {
+    const q = Number(li.dataset.q);
+    const c = fs.cells[q][col];
+    const skipped = !hasAnswer(c) && fSkipped[col].has(q);
+    li.classList.toggle('current', q === fCursor);
+    li.classList.toggle('filled', hasAnswer(c));
+    li.classList.toggle('zero', hasAnswer(c) && !(Number(c.points) > 0));
+    li.classList.toggle('skipped', skipped);
+    li.querySelector('[data-ql-ans]').textContent = hasAnswer(c)
+      ? `${c.answer} · ${ptsLabel(Number(c.points) || 0)}`
+      : skipped
+        ? 'passée'
+        : '';
+  });
+
+  const t = fs.timer || {};
+  const timeUp = t.player === col && !t.running && !t.remaining && !!t.endsAt;
+  document.getElementById('fwTimeUp').hidden = !timeUp;
+  const filled = fs.cells.filter((p) => hasAnswer(p[col])).length;
+  document.getElementById('fwAnswerHint').textContent =
+    filled === n ? '✓ Toutes les réponses sont saisies.' : `${filled} / ${n} réponses saisies`;
+  const next = document.getElementById('fwToReveal');
+  next.textContent = `Révéler les réponses de ${finalistName(fs, col)} ▶`;
+  next.classList.toggle('pulse', filled === n || timeUp);
+}
+
+function updateFinalRevealPanel(fs, col) {
+  const panel = document.querySelector(`.fw-panel[data-panel="reveal${col + 1}"]`);
+  const nextQ = fs.cells.findIndex((p) => !p[col].revealed);
+  panel.querySelectorAll('.fw-rrow').forEach((row) => {
+    const q = Number(row.dataset.q);
+    const c = fs.cells[q][col];
+    row.classList.toggle('revealed', !!c.revealed);
+    row.classList.toggle('next', q === nextQ);
+    const a = row.querySelector('[data-ans]');
+    a.textContent = hasAnswer(c) ? c.answer : 'pas de réponse';
+    a.classList.toggle('empty', !hasAnswer(c));
+    const pts = row.querySelector('[data-pts]');
+    if (document.activeElement !== pts) pts.value = Number(c.points) || 0;
+    row.querySelector('[data-rev]').textContent = c.revealed ? '✓ Affichée' : 'Révéler';
+    const first = row.querySelector('[data-first]');
+    if (first) {
+      const f = fs.cells[q][0];
+      first.textContent = `${hasAnswer(f) ? f.answer : '—'} · ${Number(f.points) || 0}`;
+    }
+  });
+
+  const name0 = finalistName(fs, 0);
+  const name1 = finalistName(fs, 1);
+  const sub0 = fs.cells.reduce((s, p) => s + (p[0].revealed ? Number(p[0].points) || 0 : 0), 0);
+  const nextLabel = (q) => `▶ Révéler Q${q + 1} : « ${hasAnswer(fs.cells[q][col]) ? fs.cells[q][col].answer : '—'} »`;
+
+  if (col === 0) {
+    document.getElementById('fwR1Hint').textContent =
+      nextQ >= 0
+        ? `${name0} : ${sub0} pts pour l'instant`
+        : `${name0} marque ${sub0} pts : il en faudra ${Math.max(0, fs.target - sub0)} à ${name1}.`;
+    document.getElementById('fwR1Next').textContent =
+      nextQ >= 0 ? nextLabel(nextQ) : `Masquer et faire venir ${name1} ▶`;
+    return;
+  }
+
+  document.getElementById('fwR2Lead').textContent = fs.concealFirst
+    ? `On rappelle d'abord le score de ${name0} (${sub0} pts), puis on dévoile les réponses de ${name1} une à une.`
+    : `${name0} a marqué ${sub0} pts. Dévoilez les réponses de ${name1} une à une.`;
+  const verdict = document.getElementById('fwVerdict');
+  const reached = fs.total >= fs.target;
+  verdict.className = 'fw-verdict' + (reached ? ' ok' : nextQ < 0 && !fs.concealFirst ? ' ko' : '');
+  verdict.textContent = reached
+    ? `🎉 Objectif atteint : ${fs.total} / ${fs.target} pts !`
+    : nextQ >= 0 || fs.concealFirst
+      ? `Total ${fs.total} / ${fs.target} : il manque ${fs.target - fs.total} pts`
+      : `Objectif manqué : ${fs.total} / ${fs.target} pts`;
+  const fam = state.teams[fs.familyIndex];
+  document.getElementById('fwR2Next').textContent = fs.concealFirst
+    ? `▶ Réafficher les réponses de ${name0}`
+    : nextQ >= 0
+      ? nextLabel(nextQ)
+      : `🏆 Écran du vainqueur : ${fam ? fam.name : 'la famille'}`;
+}
+
+// Chips du tableau complet : remplit la cellule du finaliste EN JEU.
 function wireFinalChips(ctrl) {
-  ctrl.querySelectorAll('.fchip').forEach((chip) => {
+  ctrl.querySelectorAll('.fw-manual .fchip').forEach((chip) => {
     chip.addEventListener('click', () => {
       const fs = state.finalState;
       if (!fs) return;
@@ -946,16 +1430,7 @@ function wireFinalCells(ctrl) {
     );
     cell.querySelector('.fc-reveal').addEventListener('click', () => {
       const cs = state.finalState.cells[q][col];
-      const revealed = !cs.revealed;
-      cmd('revealFinalCell', { q, col, revealed });
-      // Son uniquement à la révélation. Points attendus déduits de la proposition
-      // (évite un mauvais son si le score auto n'est pas encore synchronisé).
-      if (revealed) {
-        const props = (state.finalState.questions[q] && state.finalState.questions[q].answers) || [];
-        const m = props.find((a) => normAns(a.text) === normAns(cs.answer));
-        const pts = m ? m.points || 0 : Number(cs.points) || 0;
-        sound(pts > 0 ? 'reveal' : 'wrong');
-      }
+      revealFinalCellWithSound(q, col, !cs.revealed);
     });
     const dupBtn = cell.querySelector('.fc-dup');
     if (dupBtn) dupBtn.addEventListener('click', () => clearFinalCell(q, col));
@@ -963,13 +1438,6 @@ function wireFinalCells(ctrl) {
 }
 
 function updateFinalLive(fs, ctrl) {
-  // Finaliste en jeu
-  document.querySelectorAll('[data-fplayer]').forEach((b) =>
-    b.classList.toggle('active', Number(b.dataset.fplayer) === fs.activePlayer)
-  );
-  const badge = document.getElementById('fstatBadge');
-  if (badge) badge.textContent = `Finaliste ${fs.activePlayer + 1} en jeu`;
-
   // Famille en finale (gagnante des manches) — score affiché pour repérer la gagnante.
   document.querySelectorAll('[data-ffam]').forEach((b) => {
     const i = Number(b.dataset.ffam);
@@ -984,22 +1452,14 @@ function updateFinalLive(fs, ctrl) {
     const i = Number(inp.dataset.fn);
     if (document.activeElement !== inp) inp.value = names[i] || '';
   });
-  const label0 = names[0] ? names[0] : 'Finaliste 1';
-  const label1 = names[1] ? names[1] : 'Finaliste 2';
 
-  // Guide pas-à-pas
-  const step = computeFinalStep(fs);
-  document.querySelectorAll('#finalSteps li').forEach((li) =>
-    li.classList.toggle('active', Number(li.dataset.step) === step)
-  );
-
-  // Sous-totaux par finaliste + en-têtes (doublons exclus)
-  const sub0 = fs.cells.reduce((s, p) => s + (p[0].revealed ? p[0].points : 0), 0);
-  const sub1 = fs.cells.reduce((s, p) => s + (p[1].revealed ? p[1].points : 0), 0);
+  // Sous-totaux par finaliste (tableau complet)
+  const sub0 = fs.cells.reduce((s, p) => s + (p[0].revealed ? Number(p[0].points) || 0 : 0), 0);
+  const sub1 = fs.cells.reduce((s, p) => s + (p[1].revealed ? Number(p[1].points) || 0 : 0), 0);
   const h0 = document.getElementById('fhead0');
   const h1 = document.getElementById('fhead1');
-  if (h0) h0.textContent = `${label0} — ${sub0} pts`;
-  if (h1) h1.textContent = `${label1} — ${sub1} pts`;
+  if (h0) h0.textContent = `${finalistName(fs, 0)} — ${sub0} pts`;
+  if (h1) h1.textContent = `${finalistName(fs, 1)} — ${sub1} pts`;
 
   // Barre de progression
   const pct = Math.min(100, fs.target ? (fs.total / fs.target) * 100 : 0);
@@ -1019,7 +1479,7 @@ function updateFinalLive(fs, ctrl) {
 
   updateFinalTimerDisplay(fs);
 
-  // Cellules (sans casser la saisie en cours)
+  // Cellules du tableau complet (sans casser la saisie en cours)
   fs.cells.forEach((pair, q) => {
     pair.forEach((c, col) => {
       const cell = ctrl.querySelector(`.fcell-ctrl[data-q="${q}"][data-col="${col}"]`);
@@ -1032,18 +1492,17 @@ function updateFinalLive(fs, ctrl) {
       cell.classList.toggle('is-active', col === fs.activePlayer);
       const dupBtn = cell.querySelector('.fc-dup');
       // Bouton « Doublon » (efface) activable dès qu'une réponse du finaliste 2 existe.
-      if (dupBtn) dupBtn.disabled = !(c.answer && c.answer.trim());
+      if (dupBtn) dupBtn.disabled = !hasAnswer(c);
     });
   });
 
   // Marque les chips déjà attribuées (et par quel finaliste).
-  const norm = normAns;
-  ctrl.querySelectorAll('.fchip').forEach((chip) => {
+  ctrl.querySelectorAll('.fw-manual .fchip').forEach((chip) => {
     const q = Number(chip.dataset.q);
-    const a = norm(chip.dataset.ans);
+    const a = normAns(chip.dataset.ans);
     const pair = fs.cells[q];
-    chip.classList.toggle('used-0', a !== '' && norm(pair[0].answer) === a);
-    chip.classList.toggle('used-1', a !== '' && norm(pair[1].answer) === a);
+    chip.classList.toggle('used-0', a !== '' && normAns(pair[0].answer) === a);
+    chip.classList.toggle('used-1', a !== '' && normAns(pair[1].answer) === a);
   });
 }
 
@@ -1063,7 +1522,8 @@ function updateFinalTimerDisplay(fs) {
   const startBtn = document.getElementById('ftStart');
   if (startBtn) {
     const paused = !t.running && t.remaining > 0 && t.player === fs.activePlayer;
-    startBtn.textContent = paused ? '▶ Reprendre' : '▶ Chrono';
+    startBtn.textContent = paused ? '▶ Reprendre' : '▶ Lancer le chrono';
+    startBtn.disabled = t.running;
   }
 }
 

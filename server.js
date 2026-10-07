@@ -66,6 +66,9 @@ let animatorControl = /^(1|true|on|oui)$/i.test(process.env.ANIMATOR_CONTROL || 
 // Thème de l'écran de jeu affiché au public : 'dark' | 'light' | 'retro'.
 // Choisi depuis la régie ; persiste au chargement/à la remise à zéro.
 const THEMES = ['dark', 'light', 'retro'];
+// Étapes de la manche finale (assistant de la régie) : préparation, saisie du
+// finaliste 1, révélation de ses réponses, saisie du finaliste 2, révélation finale.
+const FINAL_PHASES = ['setup', 'answer1', 'reveal1', 'answer2', 'reveal2'];
 let displayTheme = THEMES.includes((process.env.THEME || '').toLowerCase())
   ? process.env.THEME.toLowerCase()
   : 'dark';
@@ -275,7 +278,10 @@ let state = freshState();
 
 /** Recalcule la cagnotte (somme des réponses révélées) avant diffusion. */
 function recomputePot() {
-  if (state.board) {
+  // Cagnotte déjà donnée : figée. Les réponses restantes, révélées ensuite pour
+  // le public, ne rapportent plus de points (une correction d'attribution
+  // transfère toujours le même montant).
+  if (state.board && state.board.awarded == null) {
     state.board.pot = state.board.answers
       .filter((a) => a.revealed)
       .reduce((sum, a) => sum + (a.points || 0), 0);
@@ -340,6 +346,7 @@ function buildFinalState() {
       { answer: '', points: 0, revealed: false },
     ]),
     finalistNames: ['', ''], // noms personnalisés des 2 finalistes (optionnels)
+    phase: 'setup',       // étape de l'assistant de la régie (cf. FINAL_PHASES)
     total: 0,
     activePlayer: 0,      // finaliste en jeu : 0 = finaliste 1, 1 = finaliste 2
     concealFirst: false,  // masquer au public les réponses du finaliste 1
@@ -533,6 +540,32 @@ const handlers = {
     // Le masquage du finaliste 1 suit le finaliste en jeu (effet visible et bidirectionnel) :
     // masqué pendant le tour du finaliste 2, affiché quand on revient au finaliste 1.
     fs.concealFirst = fs.activePlayer === 1;
+    fs.phase = fs.activePlayer ? 'answer2' : 'answer1';
+  },
+
+  // Étape de l'assistant de finale (régie). Chaque étape fixe le finaliste en jeu,
+  // le masquage des réponses du finaliste 1 et l'état du chrono.
+  setFinalPhase(p) {
+    const fs = state.finalState;
+    const phase = (p && p.phase ? p.phase : '').toString();
+    if (!fs || !FINAL_PHASES.includes(phase)) return;
+    fs.phase = phase;
+    const player = phase === 'answer2' || phase === 'reveal2' ? 1 : 0;
+    // On fige le chrono hors saisie (il reprendra là où il en était si l'on revient).
+    if (fs.timer.running && (phase.startsWith('reveal') || fs.timer.player !== player)) {
+      handlers.pauseFinalTimer();
+    }
+    fs.activePlayer = player;
+    if (fs.timer.player !== player) fs.timer = { running: false, endsAt: 0, remaining: 0, player };
+    // Réponses du finaliste 1 cachées au public pendant le passage du 2e, et jusqu'à
+    // leur rappel en révélation finale (setConcealFirst).
+    if (phase === 'answer2') fs.concealFirst = true;
+    else if (phase !== 'reveal2') fs.concealFirst = false;
+  },
+
+  // Révélation finale : réaffiche (ou recache) les réponses du finaliste 1.
+  setConcealFirst(p) {
+    if (state.finalState) state.finalState.concealFirst = !!(p && p.on);
   },
 
   // Révélation finale : on dévoile toutes les cellules et on lève le masquage.
@@ -541,6 +574,7 @@ const handlers = {
     if (!fs) return;
     fs.cells.forEach((pair) => pair.forEach((c) => (c.revealed = true)));
     fs.concealFirst = false;
+    fs.phase = 'reveal2';
   },
 
   // Minuteur de la finale (piloté par endsAt côté serveur).

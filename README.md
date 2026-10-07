@@ -23,10 +23,20 @@ accessibles depuis n'importe quel appareil du réseau local.
 
 ### La manche finale, pas à pas
 
-La manche finale est guidée dans la régie : bandeau « Finaliste 1 / Finaliste 2 en jeu », guide
-pas-à-pas, **barre de progression** vers l'objectif, **minuteur** (20 s / 25 s), **masquage** des
-réponses du finaliste 1 au public, bouton **« Doublon »** (réponse répétée = 0 point) et
-**« Révélation finale »**. L'objectif par défaut est de **200 points** (configurable via `target`).
+La régie suit un **assistant en 5 étapes** : Préparation → Finaliste 1 répond → ses réponses →
+Finaliste 2 répond → Révélation finale. Chaque étape a son gros bouton « suivant » (touche `Entrée`).
+
+- **Saisie** : une question à la fois ; on clique une proposition ou on tape la réponse puis `Entrée`
+  (points trouvés automatiquement, même pour une formulation approchante), « Passer » remet la question
+  à la fin, `Espace` lance/met en pause le **minuteur** (20 s / 25 s).
+- **Doublons** : la réponse du finaliste 1 est rappelée sous chaque question ; un doublon, même formulé
+  autrement, est refusé avec un buzz (0 point).
+- **Révélations** une par une (`Entrée`, ou `1`…`5`) ; réponses du finaliste 1 **masquées** au public
+  pendant le passage du 2e, puis rappelées au début de la révélation finale, avec le compte
+  « il manque X pts ».
+- Un **tableau complet** replié permet de corriger n'importe quelle case.
+
+L'objectif par défaut est de **200 points** (configurable via `target`).
 
 ## Installation
 

@@ -177,6 +177,11 @@
       <p class="board-q" id="curQuestion"></p>
       <div id="answersCtrl" class="answers-ctrl"></div>
       <div class="board-tools">
+        <div class="main-ctrl" title="Équipe qui joue la manche : celle dont la réponse au face-à-face est la mieux classée (ou à qui l'on a passé la main)">
+          <span>La main :</span>
+          <button class="btn pill" data-main="0">Équipe 1</button>
+          <button class="btn pill" data-main="1">Équipe 2</button>
+        </div>
         <div class="strikes-ctrl">
           <span>Fautes :</span>
           <button class="btn btn--x" id="strikeAdd">+ X</button>
@@ -219,6 +224,9 @@
         <li><kbd>N</kbd> <span>Lancer la manche suivante</span></li>
         <li><kbd>L</kbd> <span>Afficher le logo</span></li>
         <li><kbd>T</kbd> <span>Signal des 5 secondes</span></li>
+        <li><kbd>Entrée</kbd> <span>Finale : étape ou révélation suivante</span></li>
+        <li><kbd>Espace</kbd> <span>Finale : lancer / mettre en pause le chrono</span></li>
+        <li><kbd>1</kbd>…<kbd>5</kbd> <span>Finale (révélation) : afficher / masquer la réponse n°</span></li>
         <li><kbd>?</kbd> <span>Afficher / masquer cette aide</span></li>
         <li><kbd>Échap</kbd> <span>Fermer</span></li>
       </ul>
