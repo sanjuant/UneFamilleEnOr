@@ -140,7 +140,9 @@ function refreshLan() {
   state.lanCandidates = lanCandidates();
 }
 
-app.use(express.static(path.join(__dirname, 'public')));
+// no-cache : le navigateur revalide à chaque chargement (ETag), donc une mise à jour
+// des pages/scripts est prise en compte dès qu'on recharge l'écran.
+app.use(express.static(path.join(__dirname, 'public'), { setHeaders: (res) => res.set('Cache-Control', 'no-cache') }));
 app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
 app.use('/media', express.static(path.join(__dirname, 'media')));
 
@@ -155,6 +157,27 @@ app.get('/media/list', (_req, res) => {
         .map((f) => ({ file: f, url: '/media/' + encodeURIComponent(f) }))
     );
   });
+});
+
+// Sons perso disponibles (fichiers déposés dans sounds/, toute extension audio courante).
+// Le paramètre ?v= (date de modif) force le rechargement quand un fichier est remplacé.
+const SOUNDS_DIR = path.join(__dirname, 'sounds');
+const AUDIO_RE = /\.(mp3|wav|ogg|oga|opus|m4a|aac|flac|webm)$/i;
+app.get('/sounds/list', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const files = (await fs.promises.readdir(SOUNDS_DIR)).filter((f) => AUDIO_RE.test(f)).sort();
+    const list = await Promise.all(
+      files.map(async (f) => {
+        const st = await fs.promises.stat(path.join(SOUNDS_DIR, f)).catch(() => null);
+        const v = st ? Math.round(st.mtimeMs) : 0;
+        return { file: f, url: '/sounds/' + encodeURIComponent(f) + '?v=' + v };
+      })
+    );
+    res.json(list);
+  } catch {
+    res.json([]);
+  }
 });
 
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'display.html')));
@@ -301,6 +324,7 @@ const handlers = {
   load(p) {
     const data = p.data || {};
     clearFinalTimerExpiry();
+    setFinalMusic(false);
     state = freshState();
     state.title = (data.title || 'UNE FAMILLE EN OR').toString();
     if (Array.isArray(data.teams) && data.teams.length >= 2) {
@@ -317,6 +341,7 @@ const handlers = {
 
   reset() {
     clearFinalTimerExpiry();
+    setFinalMusic(false);
     const rounds = state.rounds;
     const final = state.final;
     const title = state.title;
@@ -433,6 +458,7 @@ const handlers = {
   // ---- Manche finale ----
   startFinal() {
     clearFinalTimerExpiry();
+    setFinalMusic(false);
     state.finalState = buildFinalState();
     state.view = 'final';
   },
@@ -498,6 +524,8 @@ const handlers = {
     const endsAt = Date.now() + seconds * 1000;
     fs.timer = { running: true, endsAt, remaining: seconds, player: fs.activePlayer };
     scheduleFinalTimerExpiry(endsAt, seconds * 1000 + 50);
+    // Musique de finale pendant tout le décompte (relancée à chaque départ/reprise).
+    if (state.view === 'final') setFinalMusic(true, true);
   },
 
   pauseFinalTimer() {
@@ -506,6 +534,7 @@ const handlers = {
     fs.timer.remaining = Math.max(0, Math.round((fs.timer.endsAt - Date.now()) / 1000));
     fs.timer.running = false;
     clearFinalTimerExpiry();
+    setFinalMusic(false);
   },
 
   resetFinalTimer() {
@@ -513,6 +542,7 @@ const handlers = {
     if (!fs) return;
     fs.timer = { running: false, endsAt: 0, remaining: 0, player: fs.activePlayer };
     clearFinalTimerExpiry();
+    setFinalMusic(false);
   },
 
   // ---- Buzzers (face-à-face) ----
@@ -566,15 +596,30 @@ const handlers = {
 const lastSoundAt = {}; // anti-rebond des événements sonores (par nom)
 
 // Expiration du minuteur de la finale : à 0, on joue un son et on arrête le chrono.
+// Signal sonore aussi quand il ne reste plus que 5 secondes.
+const FINAL_WARN_MS = 5000;
 let finalTimerHandle = null;
+let finalWarnHandle = null;
 function clearFinalTimerExpiry() {
   if (finalTimerHandle) {
     clearTimeout(finalTimerHandle);
     finalTimerHandle = null;
   }
+  if (finalWarnHandle) {
+    clearTimeout(finalWarnHandle);
+    finalWarnHandle = null;
+  }
 }
 function scheduleFinalTimerExpiry(endsAt, ms) {
   clearFinalTimerExpiry();
+  const warnIn = endsAt - FINAL_WARN_MS - Date.now();
+  if (warnIn >= 0) {
+    finalWarnHandle = setTimeout(() => {
+      finalWarnHandle = null;
+      const fs = state.finalState;
+      if (fs && fs.timer.running && fs.timer.endsAt === endsAt && state.view === 'final') emitSound('fivesec');
+    }, warnIn);
+  }
   finalTimerHandle = setTimeout(() => {
     finalTimerHandle = null;
     const fs = state.finalState;
@@ -582,15 +627,36 @@ function scheduleFinalTimerExpiry(endsAt, ms) {
     if (fs && fs.timer.running && fs.timer.endsAt === endsAt) {
       fs.timer.running = false;
       fs.timer.remaining = 0;
+      setFinalMusic(false);
       if (state.view === 'final') emitSound('timesup'); // fin du temps
       broadcastState();
     }
   }, ms);
 }
 
+/** Musique de finale (« final ») calée sur le chrono : jouée tant qu'il tourne. */
+let finalMusicOn = false;
+function setFinalMusic(on, restart) {
+  if (on === finalMusicOn && !restart) return;
+  finalMusicOn = on;
+  emitSound('final', !on);
+}
+
 /** Événement sonore transitoire diffusé à tous les écrans. */
 function emitSound(name, stop) {
   io.emit('sound', { name, stop: !!stop });
+}
+
+// Fichiers ajoutés/retirés dans sounds/ : tous les écrans re-scannent la liste.
+let soundsChangedTimer = null;
+function notifySoundsChanged() {
+  clearTimeout(soundsChangedTimer);
+  soundsChangedTimer = setTimeout(() => io.emit('soundsChanged'), 400);
+}
+try {
+  fs.watch(SOUNDS_DIR, notifySoundsChanged).on('error', () => {}); // ex. dossier supprimé : sans crash
+} catch {
+  // Surveillance indisponible : le bouton « Rescanner » de la régie prend le relais.
 }
 
 /**
@@ -721,6 +787,7 @@ io.on('connection', (socket) => {
     msg = msg || {};
     if (!socket.data.authed) return; // les sons sont déclenchés par le contrôle
     if (socket.data.role !== 'regie' && !animatorControl) return; // animateur en vision
+    if (typeof msg.name !== 'string' || !msg.name || msg.name.length > 32) return;
     // Anti-rebond : ignore un même son redéclenché < 150 ms après (double-clic,
     // ou régie + animateur qui agissent en parallèle).
     if (!msg.stop) {
@@ -729,6 +796,11 @@ io.on('connection', (socket) => {
       lastSoundAt[msg.name] = now;
     }
     emitSound(msg.name, msg.stop);
+  });
+
+  // Rescan manuel du dossier sounds/ demandé par la régie.
+  socket.on('soundsRescan', () => {
+    if (socket.data.authed) io.emit('soundsChanged');
   });
 
   // Jingle vidéo diffusé sur l'écran de jeu (même contrôle d'accès que les sons).
@@ -758,6 +830,9 @@ io.on('connection', (socket) => {
       state.buzzer.armed = false;
       // L'équipe qui a buzzé prend la main sur le plateau en cours.
       if (state.board) state.board.activeTeamIndex = team;
+      // Le face-à-face est lancé : on passe au plateau (caché sous l'annonce du buzz,
+      // l'écran de jeu fait ensuite glisser la question à sa place).
+      if (state.board && state.view === 'question') state.view = 'board';
       emitSound('buzzer');
       broadcastState();
     }

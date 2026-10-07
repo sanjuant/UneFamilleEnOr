@@ -724,6 +724,77 @@ body.regie {
   font-size: 12px;
 }
 
+/* Sons : un bouton par son, avec l'état fichier perso / synthèse */
+.card--sounds {
+  grid-column: 1 / -1;
+}
+.card--sounds code {
+  color: var(--gold-1);
+}
+.snd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.snd-btn {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  min-width: 0;
+}
+.snd-btn__emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+.snd-btn__txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.snd-btn__txt b {
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.snd-btn__txt small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.snd-btn__txt small {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.7;
+  font-family: ui-monospace, Consolas, monospace;
+}
+.snd-btn__badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.6;
+}
+.snd-btn.is-custom .snd-btn__badge {
+  color: var(--green);
+  opacity: 1;
+}
+.btn--gold .snd-btn__badge,
+.btn--gold.is-custom .snd-btn__badge {
+  color: var(--bg-0);
+}
+.snd-foot {
+  margin-bottom: 0;
+}
+.snd-count {
+  font-size: 13px;
+  color: var(--muted);
+}
+
 /* Jingle vidéo */
 .video-select,
 .video-url {

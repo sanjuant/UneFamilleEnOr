@@ -11,7 +11,7 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 🔄 **Synchro temps réel** (WebSocket) : la régie pilote, tous les écrans suivent instantanément.
 - 🏆 **Comptage des points** automatique (cagnotte × multiplicateur) + ajustement manuel.
 - ❌ **Gestion des fautes** (les 3 X) avec animation plein écran.
-- 🎵 **Sons** : joue tes propres MP3 (dossier `sounds/`), avec repli automatique sur des sons de synthèse.
+- 🎵 **Sons** : 11 sons (générique, musique de manche, buzzer, bonne/mauvaise réponse, points, signal des 5 secondes, temps écoulé, musique de finale, applaudissements, victoire). Dépose tes propres fichiers (mp3, wav, ogg, m4a…) dans `sounds/` : détectés à chaud, état visible dans la régie, repli automatique sur des sons de synthèse.
 - 🎬 **Jingle vidéo** : diffuse une vidéo en plein écran sur l'écran de jeu depuis la régie (fichiers déposés dans `media/` ou URL).
 - 🖥️ **Thèmes de l'écran de jeu** : **sombre**, **clair** ou **rétro 90s** (kitsch) — choisis en régie.
 - 🎉 Écran de victoire avec confettis.
@@ -73,7 +73,7 @@ remplacez `localhost` par l'**adresse IP de ce PC**. Exemple : `http://192.168.1
 - **Lancer une manche en 1 clic** : clic sur une manche = question affichée + buzzers armés. Bouton **« ▶ Lancer la manche suivante »** (touche `N`). Les manches jouées sont cochées ✓.
 - **Barre d'état permanente** en haut : vue, manche, question, équipe qui a la main, cagnotte, fautes, état des buzzers.
 - **Raccourcis clavier** (bouton **« ⌨ Raccourcis »** ou touche `?`) :
-  `1`-`9` révéler/masquer une réponse · `X` faute · `C` effacer les fautes · `R` tout révéler · `←`/`→` cagnotte à l'équipe gauche/droite · `B` armer les buzzers · `N` manche suivante · `L` logo.
+  `1`-`9` révéler/masquer une réponse · `X` faute · `C` effacer les fautes · `R` tout révéler · `←`/`→` cagnotte à l'équipe gauche/droite · `B` armer les buzzers · `N` manche suivante · `L` logo · `T` signal des 5 secondes.
 
 ## Sécurité — code d'accès
 
@@ -200,4 +200,22 @@ Voir [`public/questions.example.json`](public/questions.example.json).
 
 ## Sons
 
-Déposez vos fichiers dans `sounds/` (voir [`sounds/LISEZ-MOI.txt`](sounds/LISEZ-MOI.txt)).
+Déposez vos fichiers dans `sounds/` (voir [`sounds/LISEZ-MOI.txt`](sounds/LISEZ-MOI.txt)) — seul le **nom** compte, l'extension est libre :
+
+| Fichier | Son | Déclenché |
+|---|---|---|
+| `intro` | 🎬 Générique | bouton de la régie |
+| `round` | 🎵 Musique de manche | lancement d'une manche |
+| `buzzer` | 🔔 Buzzer du face-à-face | buzz d'un joueur |
+| `reveal` | ✅ Révélation d'une réponse | réponse révélée |
+| `wrong` | ❌ Mauvaise réponse (le X) | faute |
+| `points` | 🔢 Points / tableau | cagnotte ajoutée au score |
+| `5sec` | ⏱️ Signal des 5 secondes | touche `T`, et auto à 5 s de la fin du chrono final |
+| `timesup` | ⌛ Temps écoulé | fin du chrono final |
+| `final` | 💰 Musique de finale | auto pendant le chrono de la finale (en boucle) |
+| `applause` | 👏 Applaudissements | avec les points, objectif de finale atteint |
+| `win` | 🏆 Jingle de victoire | écran du gagnant |
+
+La carte **🎵 Sons** de la régie liste chaque son avec son état (**perso** = ton fichier, **synthé** = son de remplacement), permet de les tester, de tout couper et de rescanner le dossier. Les fichiers ajoutés sont détectés sans redémarrer. Les musiques ne se superposent pas (en lancer une coupe la précédente).
+
+> ⚠️ Si ton dépôt est public, ne commite pas de sons protégés par le droit d'auteur (ceux de l'émission) : garde-les en local.

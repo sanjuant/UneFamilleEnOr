@@ -12,10 +12,8 @@ const socket = io();
 socket.on('connect', () => connDot.classList.add('ok'));
 socket.on('disconnect', () => connDot.classList.remove('ok'));
 socket.on('state', (s) => render(s));
-socket.on('sound', ({ name, stop }) => {
-  if (stop) SoundManager.stop(name);
-  else SoundManager.play(name, name === 'final' ? { loop: true } : {});
-});
+socket.on('sound', (msg) => SoundManager.handle(msg));
+socket.on('soundsChanged', () => SoundManager.scan());
 
 // ---- Jingle vidéo (plein écran, piloté par la régie) ----
 let videoWasMuted = false;
@@ -327,24 +325,120 @@ function renderJoinQR(s) {
   }
 }
 
+// L'annonce « X a la main ! » est éphémère : elle disparaît au bout de
+// BUZZ_SHOW_MS, ou dès que la régie révèle une réponse / marque une faute.
+// (Le serveur garde le gagnant du buzz : la régie continue de voir qui a la main.)
+const BUZZ_SHOW_MS = 4000;
+let buzzDismissed = false;
+let buzzTimer = null;
+
+function boardProgress(b) {
+  if (!b) return 0;
+  return b.answers.filter((a) => a.revealed).length + b.strikes;
+}
+
 function renderBuzzer(s) {
   const bz = s.buzzer || { armed: false, winner: null };
   const ov = document.getElementById('buzzOverlay');
   if (!ov) return;
-  if (bz.winner !== null && bz.winner !== undefined) {
+  const hasWinner = bz.winner !== null && bz.winner !== undefined;
+  const prevWinner = prev && prev.buzzer ? prev.buzzer.winner : null;
+  if (hasWinner && (prevWinner === null || prevWinner === undefined)) {
+    // Nouveau buzz : on affiche l'annonce puis on la retire après le délai.
+    buzzDismissed = false;
+    clearTimeout(buzzTimer);
+    buzzTimer = setTimeout(() => {
+      buzzDismissed = true;
+      if (cur) renderBuzzer(cur);
+    }, BUZZ_SHOW_MS);
+  } else if (hasWinner && prev && boardProgress(s.board) > boardProgress(prev.board)) {
+    // Première réponse révélée (ou faute) : le jeu reprend, on retire l'annonce.
+    buzzDismissed = true;
+  }
+  if (!hasWinner) clearTimeout(buzzTimer);
+  const wasWinner = ov.classList.contains('winner');
+  const showWinner = hasWinner && !buzzDismissed;
+  const showArmed = !showWinner && !!bz.armed;
+  // Pendant « À vos buzzers », la question est affichée nette dans l'overlay :
+  // on masque celle de la vue (sinon elle apparaîtrait floutée derrière le voile).
+  stage.classList.toggle('bz-armed', showArmed);
+  // On ne reconstruit le contenu que s'il change (sinon les animations repartent
+  // à chaque mise à jour d'état).
+  let key = '';
+  if (showWinner) {
     const t = s.teams[bz.winner];
+    key = 'W|' + (t ? t.name : '');
     ov.className = 'buzz-overlay show winner';
-    ov.innerHTML =
-      `<div class="bz-card"><div class="bz-icon">✋</div>` +
-      `<div class="bz-team gold-text">${t ? t.name : ''}</div>` +
-      `<div class="bz-sub">a la main !</div></div>`;
-  } else if (bz.armed) {
+    if (ov.dataset.key !== key) {
+      ov.innerHTML =
+        `<div class="bz-card"><div class="bz-icon">✋</div>` +
+        `<div class="bz-team gold-text"></div>` +
+        `<div class="bz-sub">a la main !</div></div>`;
+      ov.querySelector('.bz-team').textContent = t ? t.name : '';
+    }
+  } else if (showArmed) {
+    const q = s.board ? s.board.question : '';
+    key = 'A|' + q;
     ov.className = 'buzz-overlay show armed';
-    ov.innerHTML = `<div class="bz-ribbon">🔔 À VOS BUZZERS…</div>`;
+    if (ov.dataset.key !== key) {
+      ov.innerHTML =
+        `<div class="bz-armed"><div class="bz-ribbon">🔔 À VOS BUZZERS…</div>` +
+        `<p class="question-text bz-question"></p></div>`;
+      ov.querySelector('.bz-question').textContent = q;
+    }
   } else {
     ov.className = 'buzz-overlay';
     ov.innerHTML = '';
   }
+  ov.dataset.key = key;
+  // L'annonce du buzz vient de disparaître : la question glisse du centre de
+  // l'écran jusqu'à sa place au-dessus du plateau.
+  if (wasWinner && !showWinner && !showArmed) flyQuestion();
+}
+
+const FLY_MS = 900;
+function flyQuestion() {
+  const target = document.getElementById('boardQuestion');
+  const source = document.getElementById('qText');
+  if (!cur || cur.view !== 'board' || !target || !target.textContent) return;
+  const end = target.getBoundingClientRect();
+  if (!end.width) return;
+  const srcStyle = getComputedStyle(source);
+  const endStyle = getComputedStyle(target);
+
+  // Départ : même rendu que la question pendant « À vos buzzers » (grande, centrée).
+  const fly = document.createElement('p');
+  fly.className = 'q-fly';
+  fly.textContent = target.textContent;
+  const startW = window.innerWidth * 0.9;
+  Object.assign(fly.style, {
+    left: (window.innerWidth - startW) / 2 + 'px',
+    width: startW + 'px',
+    fontSize: srcStyle.fontSize,
+    lineHeight: srcStyle.lineHeight,
+    color: srcStyle.color,
+    textShadow: srcStyle.textShadow,
+  });
+  document.body.appendChild(fly);
+  fly.style.top = (window.innerHeight - fly.offsetHeight) / 2 + 'px';
+  target.style.visibility = 'hidden';
+
+  // Arrivée : position, taille et couleur exactes de la question du plateau.
+  void fly.offsetWidth;
+  fly.classList.add('moving');
+  Object.assign(fly.style, {
+    left: end.left + 'px',
+    top: end.top + 'px',
+    width: end.width + 'px',
+    fontSize: endStyle.fontSize,
+    lineHeight: endStyle.lineHeight,
+    color: endStyle.color,
+    textShadow: endStyle.textShadow,
+  });
+  setTimeout(() => {
+    target.style.visibility = '';
+    fly.remove();
+  }, FLY_MS + 50);
 }
 
 function confetti() {

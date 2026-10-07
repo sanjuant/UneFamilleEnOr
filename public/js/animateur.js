@@ -104,14 +104,14 @@ $('revealAllBtn').addEventListener('click', () => {
   cmd('revealAll');
   sound('reveal');
 });
-$('awardA').addEventListener('click', () => {
-  cmd('awardPot', { index: 0 });
+$('awardA').addEventListener('click', () => award(0));
+$('awardB').addEventListener('click', () => award(1));
+// Cagnotte vers le score d'une équipe : son des points + applaudissements.
+function award(index) {
+  cmd('awardPot', { index });
+  sound('points');
   sound('applause');
-});
-$('awardB').addEventListener('click', () => {
-  cmd('awardPot', { index: 1 });
-  sound('applause');
-});
+}
 $('launchNextBtn').addEventListener('click', launchNext);
 
 // ---- Manche finale : lancement + pilotage ----
@@ -154,7 +154,7 @@ function nextRoundIndex() {
 }
 function launchRound(i) {
   cmd('launchRound', { index: i });
-  sound('reveal');
+  sound('round');
 }
 // Tap sur une manche : confirme si on relance la manche en cours ou une manche déjà jouée
 // (évite d'écraser la progression par un appui accidentel sur l'écran tactile).

@@ -24,10 +24,8 @@ socket.on('state', (s) => {
   state = s;
   render();
 });
-socket.on('sound', ({ name, stop }) => {
-  if (stop) SoundManager.stop(name);
-  else SoundManager.play(name, name === 'final' ? { loop: true } : {});
-});
+socket.on('sound', (msg) => SoundManager.handle(msg));
+socket.on('soundsChanged', () => SoundManager.scan());
 
 function cmd(action, payload = {}) {
   if (!authed) return;
@@ -126,7 +124,7 @@ function loadGame(data) {
 document.getElementById('resetBtn').addEventListener('click', () => {
   if (confirm('Réinitialiser la partie (scores remis à zéro) ?')) {
     cmd('reset');
-    sound('final', true);
+    sound('*', true);
   }
 });
 
@@ -146,10 +144,40 @@ document.querySelectorAll('[data-view]').forEach((b) =>
 document.getElementById('winA').addEventListener('click', () => cmd('setWinner', { index: 0 }));
 document.getElementById('winB').addEventListener('click', () => cmd('setWinner', { index: 1 }));
 
-// Sons
-document.querySelectorAll('[data-sound]').forEach((b) =>
-  b.addEventListener('click', () => sound(b.dataset.sound, b.dataset.stop === '1'))
-);
+// Sons : un bouton par son du catalogue, avec l'état « fichier perso / synthèse ».
+(() => {
+  const grid = document.getElementById('soundGrid');
+  grid.innerHTML = SoundManager.catalog
+    .map(
+      (s) => `<button class="btn snd-btn ${s.cls || ''}" data-sound="${s.key}" title="${escapeHtml(s.hint)}">
+        <span class="snd-btn__emoji">${s.emoji}</span>
+        <span class="snd-btn__txt"><b>${escapeHtml(s.label)}</b><small data-snd-file></small></span>
+        <span class="snd-btn__badge" data-snd-badge></span>
+      </button>`
+    )
+    .join('');
+  grid.querySelectorAll('[data-sound]').forEach((b) => b.addEventListener('click', () => sound(b.dataset.sound)));
+  document.getElementById('soundStopAll').addEventListener('click', () => sound('*', true));
+  document.getElementById('soundRescan').addEventListener('click', () => {
+    SoundManager.scan();
+    socket.emit('soundsRescan');
+  });
+  const renderSounds = () => {
+    let custom = 0;
+    SoundManager.catalog.forEach((s) => {
+      const b = grid.querySelector(`[data-sound="${s.key}"]`);
+      const f = SoundManager.fileFor(s.key);
+      if (f) custom++;
+      b.classList.toggle('is-custom', !!f);
+      b.querySelector('[data-snd-file]').textContent = f ? f.file : `${s.file}.mp3`;
+      b.querySelector('[data-snd-badge]').textContent = f ? 'perso' : 'synthé';
+    });
+    document.getElementById('soundCount').textContent =
+      `${custom} / ${SoundManager.catalog.length} sons perso trouvés dans sounds/`;
+  };
+  SoundManager.onChange(renderSounds);
+  renderSounds();
+})();
 
 // Plateau : outils
 document.getElementById('strikeAdd').addEventListener('click', () => {
@@ -161,14 +189,15 @@ document.getElementById('revealAllBtn').addEventListener('click', () => {
   cmd('revealAll');
   sound('reveal');
 });
-document.getElementById('awardA').addEventListener('click', () => {
-  cmd('awardPot', { index: 0 });
+document.getElementById('awardA').addEventListener('click', () => award(0));
+document.getElementById('awardB').addEventListener('click', () => award(1));
+
+// Cagnotte vers le score d'une équipe : son des points + applaudissements.
+function award(index) {
+  cmd('awardPot', { index });
+  sound('points');
   sound('applause');
-});
-document.getElementById('awardB').addEventListener('click', () => {
-  cmd('awardPot', { index: 1 });
-  sound('applause');
-});
+}
 
 // Buzzers (face-à-face)
 document.getElementById('armBuzzerBtn').addEventListener('click', () => cmd('armBuzzer'));
@@ -260,9 +289,11 @@ document.addEventListener('keydown', (e) => {
     case 'r': case 'R':
       cmd('revealAll'); sound('reveal'); e.preventDefault(); break;
     case 'ArrowLeft':
-      cmd('awardPot', { index: 0 }); sound('applause'); e.preventDefault(); break;
+      award(0); e.preventDefault(); break;
     case 'ArrowRight':
-      cmd('awardPot', { index: 1 }); sound('applause'); e.preventDefault(); break;
+      award(1); e.preventDefault(); break;
+    case 't': case 'T':
+      sound('fivesec'); e.preventDefault(); break;
     case 'b': case 'B':
       cmd('armBuzzer'); e.preventDefault(); break;
     case 'n': case 'N':
@@ -503,10 +534,10 @@ function renderRounds() {
   }
 }
 
-// Lance une manche : question + buzzers armés (face-à-face). Petit jingle.
+// Lance une manche : question + buzzers armés (face-à-face) + musique de manche.
 function launchRound(index) {
   cmd('launchRound', { index });
-  sound('reveal');
+  sound('round');
 }
 
 // Lance la prochaine manche non encore jouée. Ne fait rien si tout est joué.

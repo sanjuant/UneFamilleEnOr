@@ -83,17 +83,18 @@
     </section>
 
     <!-- Sons -->
-    <section class="card">
+    <section class="card card--sounds">
       <h2 class="card__title">🎵 Sons</h2>
-      <div class="row wrap">
-        <button class="btn snd" data-sound="intro">🎶 Générique</button>
-        <button class="btn snd" data-sound="reveal">🔔 Bonne réponse</button>
-        <button class="btn snd btn--x" data-sound="wrong">❌ Faux (le X)</button>
-        <button class="btn snd" data-sound="buzzer">⚡ Buzzer</button>
-        <button class="btn snd" data-sound="applause">👏 Applaudissements</button>
-        <button class="btn snd" data-sound="final">⏱️ Musique finale</button>
-        <button class="btn snd" data-sound="final" data-stop="1">⏹️ Stop finale</button>
-        <button class="btn snd btn--gold" data-sound="win">🎉 Victoire</button>
+      <p class="rounds-hint">
+        Pour les vrais sons de l'émission, dépose tes fichiers (mp3, wav, ogg, m4a…) dans le dossier
+        <code>sounds/</code> du PC serveur, nommés comme indiqué sous chaque bouton. Ils sont détectés
+        automatiquement ; sans fichier, un son de synthèse prend le relais.
+      </p>
+      <div class="snd-grid" id="soundGrid"></div>
+      <div class="row wrap snd-foot">
+        <button class="btn" id="soundStopAll">⏹ Couper tous les sons</button>
+        <button class="btn" id="soundRescan">🔄 Rescanner le dossier</button>
+        <span class="snd-count" id="soundCount"></span>
       </div>
     </section>
 
@@ -209,6 +210,7 @@
         <li><kbd>B</kbd> <span>Armer les buzzers</span></li>
         <li><kbd>N</kbd> <span>Lancer la manche suivante</span></li>
         <li><kbd>L</kbd> <span>Afficher le logo</span></li>
+        <li><kbd>T</kbd> <span>Signal des 5 secondes</span></li>
         <li><kbd>?</kbd> <span>Afficher / masquer cette aide</span></li>
         <li><kbd>Échap</kbd> <span>Fermer</span></li>
       </ul>
