@@ -54,10 +54,15 @@ body.regie {
 }
 
 .load-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   background: rgba(245, 197, 24, 0.08);
   border: 1px dashed var(--gold-3);
   border-radius: 10px;
-  padding: 10px 16px;
+  padding: 8px 10px 8px 16px;
   margin-bottom: 14px;
   color: var(--gold-1);
   font-size: 14px;
@@ -809,6 +814,17 @@ body.regie {
 }
 
 /* Jingle vidéo */
+.q-load {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.questions-select {
+  max-width: 420px;
+  cursor: pointer;
+}
+.questions-select,
 .video-select,
 .video-url {
   background: var(--bg-0);

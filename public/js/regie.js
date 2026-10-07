@@ -109,7 +109,7 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      loadGame(data);
+      loadGame(data, file.name);
     } catch (err) {
       alert('Fichier JSON invalide :\n' + err.message);
     }
@@ -118,25 +118,76 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
   e.target.value = '';
 });
 
-document.getElementById('exampleBtn').addEventListener('click', async () => {
-  try {
-    const res = await fetch('/questions.example.json');
-    loadGame(await res.json());
-  } catch {
-    alert("Impossible de charger l'exemple.");
+// Questions du serveur (dossier questions/) : liste rafraîchie à chaque ouverture.
+const qSelect = document.getElementById('questionsSelect');
+function refreshQuestionsList() {
+  if (!authed) return;
+  socket.emit('questionsList', (res) => {
+    if (!res || !res.ok) return;
+    const keep = qSelect.value;
+    qSelect.length = 1; // garde l'option d'invite
+    res.files.forEach((f) => {
+      const o = document.createElement('option');
+      o.value = f.file;
+      if (f.error) {
+        o.textContent = `${f.file} — ⚠ ${f.error}`;
+        o.disabled = true;
+      } else {
+        const parts = [];
+        if (f.rounds) parts.push(`${f.rounds} manche${f.rounds > 1 ? 's' : ''}`);
+        if (f.final) parts.push('finale');
+        o.textContent = `${f.title || f.file} (${parts.join(' + ')})`;
+        o.title = f.file;
+      }
+      qSelect.appendChild(o);
+    });
+    if ([...qSelect.options].some((o) => o.value === keep)) qSelect.value = keep;
+    syncQuestionsSelect(true);
+  });
+}
+// La liste montre le fichier serveur actuellement chargé. On ne la recale que quand
+// la source change (sinon un choix en cours, pas encore « Chargé », serait écrasé).
+let lastSourceKey = null;
+function syncQuestionsSelect(force) {
+  const src = state && state.source;
+  const key = src ? src.type + '|' + src.file : '';
+  if (!force && key === lastSourceKey) return;
+  lastSourceKey = key;
+  const want = src && src.type === 'server' ? src.file : '';
+  if ([...qSelect.options].some((o) => o.value === want)) qSelect.value = want;
+}
+socket.on('auth', ({ ok }) => ok && refreshQuestionsList());
+qSelect.addEventListener('focus', refreshQuestionsList);
+document.getElementById('questionsLoadBtn').addEventListener('click', () => {
+  if (!authed) return;
+  if (!qSelect.value) {
+    alert('Choisis un fichier de questions dans la liste.');
+    qSelect.focus();
+    return;
   }
+  if (!confirmReplaceGame()) return;
+  socket.emit('questionsLoad', qSelect.value, (res) => {
+    if (!res || !res.ok) alert('Chargement impossible :\n' + ((res && res.error) || 'erreur inconnue'));
+  });
 });
 
-function loadGame(data) {
+// Une partie a commencé (points marqués / manches jouées) : on confirme avant de l'écraser.
+function confirmReplaceGame() {
+  const started = state && (state.teams.some((t) => t.score) || (state.playedRounds || []).length);
+  return !started || confirm('Une partie est en cours : charger ces questions la remplacera (scores remis à zéro). Continuer ?');
+}
+
+function loadGame(data, fileName) {
   if (!data || (!Array.isArray(data.rounds) && !data.final)) {
     alert('Format inattendu : il faut au moins un tableau "rounds" ou une clé "final".');
     return;
   }
-  cmd('load', { data });
+  if (!confirmReplaceGame()) return;
+  cmd('load', { data, source: { type: 'pc', file: fileName || '' } });
 }
 
 document.getElementById('resetBtn').addEventListener('click', () => {
-  if (confirm('Réinitialiser la partie (scores remis à zéro) ?')) {
+  if (confirm('Tout réinitialiser ? Les questions seront déchargées et les scores remis à zéro.')) {
     cmd('reset');
     sound('*', true);
   }
@@ -367,9 +418,10 @@ function render() {
   if (!state) return;
 
   document.getElementById('loadInfo').textContent = state.loaded
-    ? `✓ « ${state.title} » — ${state.rounds.length} manche(s)${state.final ? ' + manche finale' : ''}.`
-    : 'Aucun jeu chargé — chargez un fichier JSON ou cliquez sur « Exemple ».';
-  document.getElementById('loadInfo').classList.toggle('ok', state.loaded);
+    ? `✓ « ${state.title} » — ${state.rounds.length} manche(s)${state.final ? ' + manche finale' : ''}`
+    : 'Aucun jeu chargé — choisissez des questions dans la liste, ou importez un fichier.';
+  syncQuestionsSelect(false);
+  document.getElementById('loadBar').classList.toggle('ok', state.loaded);
 
   // Boutons de vue actifs
   document.querySelectorAll('[data-view]').forEach((b) =>

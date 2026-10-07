@@ -12,7 +12,7 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 🏆 **Comptage des points** automatique (cagnotte × multiplicateur) + ajustement manuel.
 - ❌ **Gestion des fautes** (les 3 X) avec animation plein écran.
 - 🎵 **Sons** : 11 sons (générique, musique de manche, buzzer, bonne/mauvaise réponse, points, signal des 5 secondes, temps écoulé, musique de finale, applaudissements, victoire). Dépose tes propres fichiers (mp3, wav, ogg, m4a…) dans `sounds/` : détectés à chaud, état visible dans la régie, repli automatique sur des sons de synthèse.
-- 🎬 **Jingle vidéo** : diffuse une vidéo en plein écran sur l'écran de jeu depuis la régie (fichiers déposés dans `media/` ou URL).
+- 🎬 **Jingle vidéo** : diffuse une vidéo en plein écran sur l'écran de jeu depuis la régie (fichiers déposés dans `media/` ou URL) — préchargée par l'écran de jeu dès son ouverture (démarrage instantané), arrêt en fondu.
 - 🖥️ **Thèmes de l'écran de jeu** : **sombre**, **clair** ou **rétro 90s** (kitsch) — choisis en régie.
 - 🎉 Écran de victoire avec confettis.
 - 📖 **Règles intégrées** : page `/regles` (avec déroulé détaillé de la manche finale) accessible depuis la régie.
@@ -52,7 +52,7 @@ remplacez `localhost` par l'**adresse IP de ce PC**. Exemple : `http://192.168.1
 
 ## Déroulé d'une partie
 
-1. Dans la **régie**, cliquez sur **📂 Charger un JSON** (ou **🎲 Exemple**).
+1. Dans la **régie**, choisissez un jeu dans **📁 Choisir des questions** puis **⬇ Charger** (fichiers du dossier `questions/` du serveur), ou **📂 Importer un fichier** depuis votre PC.
 2. Réglez les noms d'équipes.
 3. Lancez le **générique**, puis sélectionnez une **manche**.
 4. Révélez les réponses (clic sur une réponse → 🔔), donnez les **fautes** (❌ → le X),
@@ -172,7 +172,9 @@ C'est une vue compagnon synchronisée : tout ce que l'animateur fait (s'il pilot
 
 ## Format du fichier de questions
 
-Voir [`public/questions.example.json`](public/questions.example.json).
+Voir [`questions/questions.example.json`](questions/questions.example.json).
+
+Déposez vos fichiers `.json` dans le dossier **`questions/`** du serveur : ils apparaissent dans la liste **📁 Choisir des questions** de la régie (titre et nombre de manches affichés, liste rafraîchie à chaque ouverture, sans redémarrer). Ce dossier n'est **pas** servi publiquement — il contient les réponses — : seule la régie authentifiée peut le lister et le charger. Un fichier peut aussi être chargé directement depuis le PC de la régie (**📂 Importer un fichier**).
 
 ```jsonc
 {

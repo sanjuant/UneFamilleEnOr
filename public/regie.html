@@ -28,11 +28,6 @@
       <small>Une Famille en Or</small>
     </div>
     <div class="topbar__actions">
-      <label class="btn btn--file">
-        📂 Charger un JSON
-        <input type="file" id="fileInput" accept="application/json,.json" hidden />
-      </label>
-      <button class="btn" id="exampleBtn">🎲 Exemple</button>
       <a class="btn" href="/" target="_blank" rel="noopener">🖥️ Écran de jeu ↗</a>
       <a class="btn" href="/animateur" target="_blank" rel="noopener">📱 Animateur ↗</a>
       <a class="btn" href="/regles" target="_blank" rel="noopener">📖 Règles ↗</a>
@@ -43,7 +38,20 @@
     </div>
   </header>
 
-  <div id="loadInfo" class="load-info">Aucun jeu chargé — chargez un fichier JSON ou cliquez sur « Exemple ».</div>
+  <!-- Questions chargées + chargement (serveur ou PC) -->
+  <div id="loadBar" class="load-info">
+    <span id="loadInfo" class="load-info__text">Aucun jeu chargé — choisissez des questions dans la liste, ou importez un fichier.</span>
+    <span class="q-load">
+      <select id="questionsSelect" class="questions-select" title="Jeux de questions disponibles">
+        <option value="">📁 Choisir des questions…</option>
+      </select>
+      <button class="btn" id="questionsLoadBtn">⬇ Charger</button>
+      <label class="btn btn--file" title="Charger un fichier de questions (.json) depuis cet ordinateur">
+        📂 Importer un fichier
+        <input type="file" id="fileInput" accept="application/json,.json" hidden />
+      </label>
+    </span>
+  </div>
 
   <!-- Barre d'état permanente -->
   <div class="statusbar" id="statusbar">
@@ -102,14 +110,14 @@
     <section class="card">
       <h2 class="card__title">🎬 Jingle vidéo</h2>
       <div class="row wrap">
-        <select id="videoSelect" class="video-select"><option value="">— vidéos du serveur —</option></select>
+        <select id="videoSelect" class="video-select"><option value="">🎬 Choisir une vidéo…</option></select>
         <button class="btn btn--gold" id="videoPlay">▶ Diffuser</button>
         <button class="btn" id="videoStop">⏹ Stop</button>
       </div>
       <div class="row">
         <input type="text" id="videoUrl" class="video-url" placeholder="…ou colle une URL de vidéo (.mp4 / .webm)" />
       </div>
-      <p class="rounds-hint">Dépose des fichiers <code>.mp4</code>/<code>.webm</code> dans le dossier <code>media/</code> du serveur, ou colle une URL. La vidéo s'affiche en plein écran sur l'écran de jeu. Les vidéos de <code>media/</code> sont préchargées par l'écran de jeu dès son ouverture (démarrage instantané) ; ⏹ Stop termine par un fondu.</p>
+      <p class="rounds-hint">Dépose des fichiers <code>.mp4</code>/<code>.webm</code> dans le dossier <code>media/</code> du serveur, ou colle une URL. La vidéo s'affiche en plein écran sur l'écran de jeu.</p>
     </section>
 
     <!-- Buzzers (face-à-face) -->

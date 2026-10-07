@@ -159,6 +159,40 @@ app.get('/media/list', (_req, res) => {
   });
 });
 
+// Fichiers de questions du serveur (dossier questions/). Volontairement HORS de public/ :
+// ils contiennent les réponses, on ne les sert qu'à la régie authentifiée (via socket).
+const QUESTIONS_DIR = path.join(__dirname, 'questions');
+const QUESTIONS_MAX_BYTES = 2 * 1024 * 1024;
+
+/** Lit et valide un fichier de questions (nom simple .json, dans questions/ uniquement). */
+async function readQuestionsFile(file) {
+  const name = path.basename((file || '').toString());
+  if (!/\.json$/i.test(name)) throw new Error('Fichier .json attendu.');
+  const full = path.join(QUESTIONS_DIR, name);
+  const st = await fs.promises.stat(full);
+  if (st.size > QUESTIONS_MAX_BYTES) throw new Error('Fichier trop volumineux.');
+  const data = JSON.parse(await fs.promises.readFile(full, 'utf8'));
+  if (!data || (!Array.isArray(data.rounds) && !data.final)) {
+    throw new Error('Format inattendu : il faut au moins un tableau "rounds" ou une clé "final".');
+  }
+  return data;
+}
+
+/** Liste des fichiers de questions avec un résumé (titre, nombre de manches, finale). */
+async function listQuestionsFiles() {
+  const files = (await fs.promises.readdir(QUESTIONS_DIR).catch(() => [])).filter((f) => /\.json$/i.test(f)).sort();
+  return Promise.all(
+    files.map(async (file) => {
+      try {
+        const d = await readQuestionsFile(file);
+        return { file, title: d.title || '', rounds: Array.isArray(d.rounds) ? d.rounds.length : 0, final: !!d.final };
+      } catch (err) {
+        return { file, error: err.message };
+      }
+    })
+  );
+}
+
 // Sons perso disponibles (fichiers déposés dans sounds/, toute extension audio courante).
 // Le paramètre ?v= (date de modif) force le rechargement quand un fichier est remplacé.
 const SOUNDS_DIR = path.join(__dirname, 'sounds');
@@ -216,6 +250,7 @@ function freshState() {
   return {
     title: 'UNE FAMILLE EN OR',
     loaded: false,
+    source: null,        // origine des questions : { type: 'server' | 'pc', file }
     teams: [
       { name: 'ÉQUIPE 1', score: 0 },
       { name: 'ÉQUIPE 2', score: 0 },
@@ -337,21 +372,17 @@ const handlers = {
     state.final = data.final || null;
     state.loaded = state.rounds.length > 0 || !!state.final;
     state.view = 'logo';
+    const src = p.source || {};
+    state.source = state.loaded
+      ? { type: src.type === 'server' ? 'server' : 'pc', file: (src.file || '').toString().slice(0, 200) }
+      : null;
   },
 
+  // Remise à zéro complète : questions déchargées, scores et équipes par défaut.
   reset() {
     clearFinalTimerExpiry();
     setFinalMusic(false);
-    const rounds = state.rounds;
-    const final = state.final;
-    const title = state.title;
-    const teams = state.teams.map((t) => ({ name: t.name, score: 0 }));
     state = freshState();
-    state.rounds = rounds;
-    state.final = final;
-    state.title = title;
-    state.teams = teams;
-    state.loaded = rounds.length > 0 || !!final;
   },
 
   setTeamName(p) {
@@ -813,6 +844,26 @@ io.on('connection', (socket) => {
     const src = (msg.src || '').toString().slice(0, 500);
     // N'accepte qu'un fichier local /media ou une URL http(s) (anti-abus léger).
     if (/^\/media\//.test(src) || /^https?:\/\//i.test(src)) io.emit('video', { src });
+  });
+
+  // Fichiers de questions du serveur : liste + chargement (mêmes droits qu'une commande).
+  const canCommand = () => socket.data.authed && (socket.data.role === 'regie' || animatorControl);
+  socket.on('questionsList', async (ack) => {
+    if (typeof ack !== 'function') return;
+    if (!canCommand()) return ack({ ok: false, error: 'Accès refusé.' });
+    ack({ ok: true, files: await listQuestionsFiles() });
+  });
+  socket.on('questionsLoad', async (file, ack) => {
+    const reply = typeof ack === 'function' ? ack : () => {};
+    if (!canCommand()) return reply({ ok: false, error: 'Accès refusé.' });
+    try {
+      const data = await readQuestionsFile(file);
+      handlers.load({ data, source: { type: 'server', file: path.basename(file.toString()) } });
+      broadcastState();
+      reply({ ok: true });
+    } catch (err) {
+      reply({ ok: false, error: err.code === 'ENOENT' ? 'Fichier introuvable.' : err.message });
+    }
   });
 
   // Préchargement des vidéos par l'écran de jeu : progression relayée à la régie
