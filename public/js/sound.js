@@ -82,6 +82,7 @@ const SoundManager = (() => {
               el.pause();
               delete playing[key];
             }
+            if (el.dataset.blob) URL.revokeObjectURL(el.dataset.blob);
             delete elements[key];
           }
           if (f && !elements[key]) {
@@ -90,6 +91,16 @@ const SoundManager = (() => {
             a.dataset.url = f.url;
             a.src = f.url;
             elements[key] = a;
+            // Préchargement complet en mémoire (preload="auto" n'est qu'un indice que
+            // le navigateur peut ignorer) : le son part sans délai au 1er déclenchement.
+            fetch(f.url)
+              .then((r) => (r.ok ? r.blob() : null))
+              .then((b) => {
+                if (!b || elements[key] !== a || playing[key] === a) return; // remplacé ou en cours
+                a.dataset.blob = URL.createObjectURL(b);
+                a.src = a.dataset.blob;
+              })
+              .catch(() => {});
           }
         });
         scanned = true;

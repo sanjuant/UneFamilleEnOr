@@ -243,13 +243,31 @@ document.getElementById('animModeCtrl').addEventListener('click', () => cmd('set
   const sel = document.getElementById('videoSelect');
   const urlInput = document.getElementById('videoUrl');
   if (!sel) return;
+  // État du préchargement sur l'écran de jeu, affiché à côté de chaque vidéo.
+  const preload = {};
+  const label = (o) => {
+    const st = preload[o.value];
+    let tag = '';
+    if (st && st.done) tag = ' — ✓ préchargée';
+    else if (st && st.error) tag = ' — ⚠ préchargement échoué';
+    else if (st && st.total) tag = ` — ⏳ ${Math.floor((st.loaded / st.total) * 100)} %`;
+    o.textContent = o.dataset.file + tag;
+  };
+  socket.on('mediaPreload', (st) => {
+    if (!st || !st.url) return;
+    preload[st.url] = st;
+    const o = [...sel.options].find((x) => x.value === st.url);
+    if (o) label(o);
+  });
+  socket.on('auth', ({ ok }) => ok && socket.emit('mediaPreloadGet'));
   fetch('/media/list')
     .then((r) => r.json())
     .then((vids) => {
       (vids || []).forEach((v) => {
         const o = document.createElement('option');
         o.value = v.url;
-        o.textContent = v.file;
+        o.dataset.file = v.file;
+        label(o);
         sel.appendChild(o);
       });
     })

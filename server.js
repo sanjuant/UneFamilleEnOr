@@ -594,6 +594,7 @@ const handlers = {
 // ---------------------------------------------------------------------------
 
 const lastSoundAt = {}; // anti-rebond des événements sonores (par nom)
+const mediaPreload = new Map(); // url vidéo -> progression du préchargement sur l'écran de jeu
 
 // Expiration du minuteur de la finale : à 0, on joue un son et on arrête le chrono.
 // Signal sonore aussi quand il ne reste plus que 5 secondes.
@@ -812,6 +813,28 @@ io.on('connection', (socket) => {
     const src = (msg.src || '').toString().slice(0, 500);
     // N'accepte qu'un fichier local /media ou une URL http(s) (anti-abus léger).
     if (/^\/media\//.test(src) || /^https?:\/\//i.test(src)) io.emit('video', { src });
+  });
+
+  // Préchargement des vidéos par l'écran de jeu : progression relayée à la régie
+  // (aux seules surfaces authentifiées ; valeurs bornées, l'émetteur est public).
+  socket.on('mediaPreload', (msg) => {
+    msg = msg || {};
+    const url = (msg.url || '').toString().slice(0, 500);
+    if (!/^\/media\//.test(url)) return;
+    const st = {
+      url,
+      loaded: Math.max(0, Number(msg.loaded) || 0),
+      total: Math.max(0, Number(msg.total) || 0),
+      done: !!msg.done,
+      error: !!msg.error,
+    };
+    mediaPreload.set(url, st);
+    if (mediaPreload.size > 200) mediaPreload.delete(mediaPreload.keys().next().value);
+    io.sockets.sockets.forEach((s) => s.data.authed && s.emit('mediaPreload', st));
+  });
+  // La régie demande l'état du préchargement à son ouverture.
+  socket.on('mediaPreloadGet', () => {
+    if (socket.data.authed) mediaPreload.forEach((st) => socket.emit('mediaPreload', st));
   });
 
   // Un smartphone s'annonce comme buzzer d'une équipe.

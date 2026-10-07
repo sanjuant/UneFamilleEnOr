@@ -16,17 +16,65 @@ socket.on('sound', (msg) => SoundManager.handle(msg));
 socket.on('soundsChanged', () => SoundManager.scan());
 
 // ---- Jingle vidéo (plein écran, piloté par la régie) ----
+
+// Préchargement : les vidéos de media/ sont téléchargées en entier en mémoire dès
+// l'ouverture de l'écran (une à la fois), pour démarrer instantanément sans
+// mise en mémoire tampon. La progression est remontée à la régie.
+const mediaCache = {}; // url -> URL blob locale
+let preloading = false;
+async function preloadMedia() {
+  if (preloading) return;
+  preloading = true;
+  try {
+    const list = await fetch('/media/list', { cache: 'no-store' }).then((r) => r.json());
+    for (const { url } of Array.isArray(list) ? list : []) {
+      if (!mediaCache[url]) await preloadOne(url);
+    }
+  } catch {}
+  preloading = false;
+}
+async function preloadOne(url) {
+  const report = (st) => socket.emit('mediaPreload', { url, ...st });
+  try {
+    const res = await fetch(url);
+    if (!res.ok || !res.body) throw new Error(res.status);
+    const total = Number(res.headers.get('Content-Length')) || 0;
+    const reader = res.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+    let lastPct = -1;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      const pct = total ? Math.floor((loaded / total) * 20) : -1; // tous les 5 %
+      if (pct !== lastPct) {
+        lastPct = pct;
+        report({ loaded, total });
+      }
+    }
+    const type = res.headers.get('Content-Type') || 'video/mp4';
+    mediaCache[url] = URL.createObjectURL(new Blob(chunks, { type }));
+    report({ loaded, total: total || loaded, done: true });
+  } catch {
+    report({ error: true });
+  }
+}
+socket.on('connect', preloadMedia);
+
 let videoWasMuted = false;
 function playVideo(src) {
   const ov = document.getElementById('videoOverlay');
   const v = document.getElementById('jingleVideo');
   if (!ov || !v) return;
+  cancelVideoFade();
   // Coupe les autres sons pendant le jingle (évite la superposition avec la musique).
   // On ne mémorise l'état de mute qu'à la 1re entrée : une rediffusion / un enchaînement
   // de jingles ne doit pas écraser l'état sauvegardé (sinon le son resterait coupé).
   if (!ov.classList.contains('show')) videoWasMuted = SoundManager.isMuted();
   SoundManager.setMuted(true);
-  v.src = src;
+  v.src = mediaCache[src] || src; // version préchargée si disponible
   ov.classList.add('show');
   // Si l'autoplay est refusé (public n'a pas encore activé le son), on ne reste pas
   // bloqué sur un écran noir : on referme l'overlay et on restaure le son.
@@ -36,18 +84,50 @@ function hideVideo() {
   const ov = document.getElementById('videoOverlay');
   const v = document.getElementById('jingleVideo');
   if (!ov || !v) return;
+  cancelVideoFade();
   ov.classList.remove('show');
   v.pause();
   v.removeAttribute('src');
   v.load();
   SoundManager.setMuted(videoWasMuted);
 }
+
+// Fondu de sortie (image vers le noir/le jeu + son) au Stop et en fin de vidéo.
+const VIDEO_FADE_MS = 1200;
+let videoFade = null;
+function cancelVideoFade() {
+  const ov = document.getElementById('videoOverlay');
+  const v = document.getElementById('jingleVideo');
+  if (videoFade) {
+    clearInterval(videoFade.tick);
+    clearTimeout(videoFade.guard);
+    videoFade = null;
+  }
+  if (ov) ov.style.opacity = '';
+  if (v) v.volume = 1;
+}
+function fadeOutVideo() {
+  const ov = document.getElementById('videoOverlay');
+  const v = document.getElementById('jingleVideo');
+  if (!ov || !v || !ov.classList.contains('show') || videoFade) return;
+  const t0 = performance.now();
+  const vol0 = v.volume;
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / VIDEO_FADE_MS);
+    ov.style.opacity = String(1 - k);
+    v.volume = vol0 * (1 - k) * (1 - k); // courbe douce pour l'oreille
+    if (k >= 1) hideVideo();
+  };
+  // Filet de sécurité si l'onglet est en arrière-plan (minuteurs ralentis).
+  videoFade = { tick: setInterval(step, 30), guard: setTimeout(hideVideo, VIDEO_FADE_MS + 500) };
+}
+
 socket.on('video', (msg) => {
   if (!msg) return;
-  if (msg.stop) hideVideo();
+  if (msg.stop) fadeOutVideo();
   else if (msg.src) playVideo(msg.src);
 });
-document.getElementById('jingleVideo').addEventListener('ended', hideVideo);
+document.getElementById('jingleVideo').addEventListener('ended', fadeOutVideo);
 
 // ---- Activation du son + plein écran ----
 const gate = document.getElementById('soundGate');
