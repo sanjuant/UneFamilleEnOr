@@ -80,10 +80,13 @@ remplacez `localhost` par l'**adresse IP de ce PC**. Exemple : `http://192.168.1
 
 ## Confort de régie
 
+- **Assistant de manche** : la carte « Manche en cours » guide chaque manche, **face-à-face → jeu → vol → fin de manche**, avec la consigne du moment et son bouton principal (touche `Entrée`). Au face-à-face, on clique (ou tape) la réponse de chaque joueur : la régie compare les places et donne la main à la mieux classée, puis « joue » ou « passe ». Au 3e X, elle passe d'elle-même au vol ; le vol réussi ou raté donne la cagnotte à la bonne famille en un clic.
+- **« Ce que dit le joueur »** : on tape la réponse entendue puis `Entrée` : révélée si elle est au tableau (même formulée autrement), sinon X.
+- Pendant le jeu, les **autres cartes s'estompent** (nettes au survol) : la manche en cours, ou la finale, ressort sans que rien ne bouge.
 - **Lancer une manche en 1 clic** : clic sur une manche = question affichée + buzzers armés. Bouton **« ▶ Lancer la manche suivante »** (touche `N`). Les manches jouées sont cochées ✓.
 - **Barre d'état permanente** en haut : vue, manche, question, équipe qui a la main, cagnotte, fautes, état des buzzers.
 - **Raccourcis clavier** (bouton **« ⌨ Raccourcis »** ou touche `?`) :
-  `1`-`9` révéler/masquer une réponse · `X` faute · `C` effacer les fautes · `R` tout révéler · `←`/`→` cagnotte à l'équipe gauche/droite · `B` armer les buzzers · `N` manche suivante · `L` logo · `T` signal des 5 secondes.
+  `Entrée` action principale de l'étape · `1`-`9` la réponse n° (selon l'étape) · `X` pas au tableau / faute · `C` effacer les fautes · `R` tout révéler · `←`/`→` cagnotte à l'équipe gauche/droite · `B` armer les buzzers · `N` manche suivante · `L` logo · `T` signal des 5 secondes.
 
 ## Sécurité — code d'accès
 

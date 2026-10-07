@@ -372,20 +372,15 @@ document.addEventListener('keydown', (e) => {
   // Manche finale à l'écran : Entrée, Espace et 1…9 pilotent l'assistant.
   if (state && state.view === 'final' && state.finalState && finalShortcut(k)) return e.preventDefault();
 
-  // Révéler/masquer une réponse du plateau
-  if (/^[1-9]$/.test(k) && state && state.board && state.view !== 'final') {
-    const i = Number(k) - 1;
-    const a = state.board.answers[i];
-    if (a) {
-      if (a.revealed) cmd('hideAnswer', { index: i });
-      else { cmd('revealAnswer', { index: i }); sound('reveal'); }
-    }
-    return e.preventDefault();
+  // Manche : 1…9 = la réponse n°, Entrée = action principale de l'étape (assistant)
+  if (state && state.board && state.view !== 'final') {
+    if (/^[1-9]$/.test(k)) return roundAnswerClick(Number(k) - 1), e.preventDefault();
+    if (k === 'Enter') return runRoundPrimary() && e.preventDefault();
   }
 
   switch (k) {
     case 'x': case 'X':
-      cmd('addStrike'); sound('wrong'); e.preventDefault(); break;
+      roundMiss(); e.preventDefault(); break;
     case 'c': case 'C':
       cmd('clearStrikes'); e.preventDefault(); break;
     case 'r': case 'R':
@@ -443,6 +438,11 @@ function render() {
   renderBoard();
   renderFinal();
   renderBuzzer();
+
+  // Pendant le jeu, les autres cartes s'estompent : la manche en cours (ou la finale) reste nette.
+  const grid = document.querySelector('main.grid');
+  grid.classList.toggle('focus-board', !!state.board && (state.view === 'question' || state.view === 'board'));
+  grid.classList.toggle('focus-final', !!state.final && state.view === 'final');
 }
 
 // Sélecteur de thème : reflète le thème courant de l'écran de jeu.
@@ -681,7 +681,7 @@ function renderBoard() {
   if (aB) aB.classList.toggle('active', act === 1);
   document.querySelectorAll('[data-main]').forEach((b) => {
     const i = Number(b.dataset.main);
-    b.textContent = state.teams[i] ? state.teams[i].name : `Équipe ${i + 1}`;
+    b.textContent = teamName(i);
     b.classList.toggle('active', act === i);
   });
 
@@ -695,32 +695,337 @@ function renderBoard() {
       <button class="ans-btn" data-i="${i}">
         <span class="ab-rank">${i + 1}</span>
         <span class="ab-text">${escapeHtml(a.text)}</span>
+        <span class="ab-who"></span>
         <span class="ab-pts">${a.points}</span>
         <span class="ab-state">caché</span>
       </button>`
       )
       .join('');
-    ctrl.querySelectorAll('.ans-btn').forEach((b) => {
-      const i = Number(b.dataset.i);
-      b.addEventListener('click', () => {
-        const revealed = state.board.answers[i].revealed;
-        if (revealed) {
-          cmd('hideAnswer', { index: i });
-        } else {
-          cmd('revealAnswer', { index: i });
-          sound('reveal');
-        }
-      });
-    });
+    ctrl.querySelectorAll('.ans-btn').forEach((b) =>
+      b.addEventListener('click', () => roundAnswerClick(Number(b.dataset.i)))
+    );
+    document.getElementById('rwInput').value = '';
+    updateRoundHint();
   }
 
+  const fo = faceoffOf(board);
   board.answers.forEach((a, i) => {
     const b = ctrl.querySelector(`.ans-btn[data-i="${i}"]`);
     if (!b) return;
     b.classList.toggle('revealed', a.revealed);
     b.querySelector('.ab-state').textContent = a.revealed ? '✓ affiché' : 'caché';
+    // Qui l'a trouvée au face-à-face
+    const who = [0, 1].find((t) => fo.answers[t] === i);
+    const whoEl = b.querySelector('.ab-who');
+    whoEl.textContent = who !== undefined ? teamName(who) : '';
+    whoEl.title = who !== undefined ? `Trouvée au face-à-face par ${teamName(who)}` : '';
   });
+  ctrl.dataset.phase = roundPhase(board);
+  renderRoundGuide(board);
 }
+
+// ------------------------------------------------------------------ //
+//  Manche : assistant (face-à-face → jeu → vol → fin de manche)
+// ------------------------------------------------------------------ //
+// Mêmes étapes que ROUND_PHASES côté serveur.
+const ROUND_PHASES = ['faceoff', 'play', 'steal', 'done'];
+const teamName = (i) => (state.teams[i] ? state.teams[i].name : `Équipe ${i + 1}`);
+const roundPhase = (b) => b.phase || 'faceoff';
+const faceoffOf = (b) => b.faceoff || { first: null, answers: [null, null], winner: null };
+
+/** Équipe qui répond en premier au face-à-face : choix de la régie, sinon le buzz. */
+function faceoffFirst(b) {
+  const fo = faceoffOf(b);
+  if (fo.first != null) return fo.first;
+  const w = state.buzzer && state.buzzer.winner;
+  return w === 0 || w === 1 ? w : null;
+}
+
+/** Équipe dont on attend la réponse au face-à-face (null : décidé, ou premier inconnu). */
+function faceoffResponder(b) {
+  const fo = faceoffOf(b);
+  const first = faceoffFirst(b);
+  if (first == null || fo.winner != null) return null;
+  if (fo.answers[first] == null) return first;
+  if (fo.answers[1 - first] == null) return 1 - first;
+  return null; // les deux ont raté
+}
+
+/** Clic sur une réponse du tableau (ou touche 1…9) : son effet dépend de l'étape. */
+function roundAnswerClick(i) {
+  const b = state.board;
+  const a = b && b.answers[i];
+  if (!a) return;
+  const phase = roundPhase(b);
+  if (phase === 'faceoff') {
+    const team = faceoffResponder(b);
+    if (team == null) {
+      showToast(
+        faceoffFirst(b) == null
+          ? "Indiquez d'abord l'équipe qui a buzzé."
+          : 'Face-à-face terminé : choisissez « joue » ou « passe ».'
+      );
+      return;
+    }
+    if (a.revealed) return showToast('Déjà au tableau : le joueur doit donner une autre réponse.');
+    cmd('faceoffAnswer', { team, index: i });
+    sound('reveal');
+    return;
+  }
+  if (phase === 'steal') {
+    if (a.revealed) return showToast('Déjà au tableau : cette réponse ne permet pas de voler.');
+    cmd('stealResult', { index: i }); // vol réussi : la famille qui vole rafle la cagnotte
+    sound('reveal');
+    setTimeout(() => sound('points'), 900);
+    return;
+  }
+  // Jeu (ou fin de manche) : révéler / masquer
+  if (a.revealed) cmd('hideAnswer', { index: i });
+  else {
+    cmd('revealAnswer', { index: i });
+    sound('reveal');
+  }
+}
+
+/** Réponse absente du tableau (bouton, touche X) : son effet dépend de l'étape. */
+function roundMiss() {
+  const b = state.board;
+  if (!b) return;
+  const phase = roundPhase(b);
+  if (phase === 'faceoff') {
+    const team = faceoffResponder(b);
+    if (team == null) return showToast("Indiquez d'abord l'équipe qui a buzzé.");
+    cmd('faceoffAnswer', { team, index: -1 });
+    sound('wrong');
+  } else if (phase === 'steal') {
+    cmd('stealResult', { index: -1 }); // vol raté : la cagnotte revient à la famille qui jouait
+    sound('wrong');
+    setTimeout(() => sound('points'), 900);
+  } else if (phase === 'play') {
+    cmd('addStrike');
+    sound('wrong');
+  }
+}
+
+/** Champ « ce que dit le joueur » : réponse du tableau correspondante. */
+function roundMatch(text) {
+  return state.board ? matchAnswer(state.board.answers, text) : null;
+}
+
+function updateRoundHint() {
+  const hint = document.getElementById('rwHint');
+  const text = document.getElementById('rwInput').value;
+  const b = state.board;
+  document.querySelectorAll('#answersCtrl .ans-btn').forEach((el) => el.classList.remove('match'));
+  if (!b || !text.trim()) {
+    hint.className = 'rw-say__hint';
+    hint.textContent = '';
+    return;
+  }
+  const m = roundMatch(text);
+  const phase = roundPhase(b);
+  const missLabel = phase === 'faceoff' ? 'pas au tableau' : phase === 'steal' ? 'vol raté' : 'faute (X)';
+  if (m) {
+    const el = document.querySelector(`#answersCtrl .ans-btn[data-i="${m.i}"]`);
+    if (el) el.classList.add('match');
+  }
+  if (m && !b.answers[m.i].revealed) {
+    hint.className = 'rw-say__hint ok';
+    hint.textContent = `${m.exact ? '✓' : '≈'} n°${m.i + 1} ${m.a.text} (${m.a.points}) — Entrée pour la révéler`;
+  } else if (m) {
+    hint.className = 'rw-say__hint miss';
+    hint.textContent = `Déjà au tableau (n°${m.i + 1}) — Entrée = ${phase === 'faceoff' ? 'redemander' : missLabel}`;
+  } else {
+    hint.className = 'rw-say__hint miss';
+    hint.textContent = `Pas au tableau — Entrée = ${missLabel}`;
+  }
+}
+
+function submitRoundInput() {
+  const inp = document.getElementById('rwInput');
+  const text = inp.value;
+  if (!text.trim()) return runRoundPrimary();
+  const b = state.board;
+  if (!b) return;
+  const m = roundMatch(text);
+  if (m && !b.answers[m.i].revealed) roundAnswerClick(m.i);
+  else if (m && roundPhase(b) === 'faceoff') return showToast('Déjà au tableau : le joueur doit donner une autre réponse.');
+  else roundMiss(); // absente, ou déjà trouvée : faute
+  inp.value = '';
+  updateRoundHint();
+}
+
+/** Prochaine étape après une manche : manche suivante, finale, ou victoire. */
+function roundNextStep(primary) {
+  if (!allRoundsPlayed()) return { label: '▶ Manche suivante', cls: 'btn--gold', primary, fn: nextRound };
+  if (state.final) {
+    return {
+      label: '⭐ Démarrer la manche finale',
+      cls: 'btn--gold',
+      primary,
+      fn: () => {
+        document.getElementById('startFinalBtn').click();
+        // Action explicite : on descend jusqu'à la carte de la finale, en bas de page.
+        setTimeout(() => document.getElementById('finalCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      },
+    };
+  }
+  const lead = state.teams[1].score > state.teams[0].score ? 1 : 0;
+  return { label: `🏆 Victoire : ${teamName(lead)}`, cls: 'btn--gold', primary, fn: () => cmd('setWinner', { index: lead }) };
+}
+
+/** Consigne du moment : titre, explication et actions possibles. */
+function roundGuide(b) {
+  const phase = roundPhase(b);
+  const fo = faceoffOf(b);
+  const act = b.activeTeamIndex;
+  const said = (i) => (i >= 0 ? `« ${b.answers[i].text} » (n°${i + 1})` : 'pas au tableau');
+  const pot = b.multiplier > 1 ? `${b.pot * b.multiplier} pts (${b.pot} × ${b.multiplier})` : `${b.pot} pts`;
+
+  if (phase === 'faceoff') {
+    const first = faceoffFirst(b);
+    if (first == null) {
+      return {
+        title: '① Face-à-face : qui a buzzé ?',
+        sub: state.buzzer && state.buzzer.armed
+          ? 'Buzzers armés : en attente du premier buzz… Sans buzzers, indiquez l\'équipe la plus rapide.'
+          : 'Indiquez l\'équipe la plus rapide, ou armez les buzzers.',
+        actions: [
+          { label: `✋ ${teamName(0)}`, fn: () => cmd('faceoffFirst', { team: 0 }) },
+          { label: `✋ ${teamName(1)}`, fn: () => cmd('faceoffFirst', { team: 1 }) },
+          { label: '🟢 Armer les buzzers', fn: () => cmd('armBuzzer') },
+        ],
+      };
+    }
+    if (fo.winner != null) {
+      const w = fo.winner;
+      const l = 1 - w;
+      const why =
+        fo.answers[l] == null
+          ? `Réponse n°1 du tableau : ${said(fo.answers[w])} !`
+          : `${teamName(w)} : ${said(fo.answers[w])} · ${teamName(l)} : ${said(fo.answers[l])}.`;
+      return {
+        title: `① ${teamName(w)} gagne le face-à-face`,
+        sub: `${why} Joue ou passe ?`,
+        actions: [
+          { label: `▶ ${teamName(w)} joue`, cls: 'btn--gold', primary: true, fn: () => cmd('playOrPass', { pass: false }) },
+          { label: `↪ Passe la main à ${teamName(l)}`, fn: () => cmd('playOrPass', { pass: true }) },
+          { label: '⟲ Recommencer', fn: () => cmd('faceoffReset') },
+        ],
+      };
+    }
+    const resp = faceoffResponder(b);
+    if (resp == null) {
+      return {
+        title: '① Aucune réponse au tableau',
+        sub: 'Personne ne prend la main : on rejoue le face-à-face avec les deux joueurs suivants.',
+        actions: [{ label: '⟲ Rejouer le face-à-face', cls: 'btn--gold', primary: true, fn: () => cmd('faceoffReset') }],
+      };
+    }
+    const prev = fo.answers[first];
+    return {
+      title: `① Face-à-face : réponse de ${teamName(resp)}`,
+      sub:
+        resp === first
+          ? `${teamName(resp)} a buzzé. Cliquez sa réponse au tableau, tapez-la, ou « Pas au tableau ». La réponse n°1 gagne directement.`
+          : `${teamName(first)} : ${said(prev)}. À ${teamName(resp)} : il lui faut ${prev >= 0 ? 'une réponse mieux classée' : 'une réponse au tableau'} pour prendre la main.`,
+      actions: [
+        { label: '✗ Pas au tableau', cls: 'btn--x', fn: roundMiss },
+        { label: '⟲ Recommencer', fn: () => cmd('faceoffReset') },
+      ],
+    };
+  }
+
+  if (phase === 'play') {
+    const found = b.answers.filter((a) => a.revealed).length;
+    const n = b.answers.length;
+    if (found === n) {
+      return {
+        title: '② Tableau complet !',
+        sub: `${teamName(act)} a tout trouvé : elle remporte la manche, sans vol.`,
+        actions: [{ label: `🏆 Donner ${pot} à ${teamName(act)}`, cls: 'btn--gold', primary: true, fn: () => award(act ?? 0) }],
+      };
+    }
+    return {
+      title: `② ${act != null ? teamName(act) : 'La famille'} joue`,
+      sub: `${found} / ${n} réponses trouvées · ${b.strikes} X sur 3 · cagnotte : ${pot}. Chaque joueur répond à son tour.`,
+      actions: [{ label: '✗ Faute (X)', cls: 'btn--x', fn: roundMiss }],
+    };
+  }
+
+  if (phase === 'steal') {
+    const thief = act != null ? 1 - act : null;
+    return {
+      title: `③ Vol : ${thief != null ? teamName(thief) : "l'adversaire"} tente sa chance`,
+      sub: `${thief != null ? teamName(thief) : "L'adversaire"} se concerte et donne UNE réponse. Au tableau : elle rafle ${pot}. Sinon, la cagnotte revient à ${teamName(act)}.`,
+      actions: [{ label: `✗ Vol raté : cagnotte à ${teamName(act)}`, cls: 'btn--x', fn: roundMiss }],
+    };
+  }
+
+  // Fin de manche
+  const won = b.awarded != null ? b.awarded : act;
+  const rest = b.answers.some((a) => !a.revealed);
+  const actions = [];
+  if (rest) actions.push({ label: '👁 Révéler le reste', primary: true, fn: () => { cmd('revealAll'); sound('reveal'); } });
+  actions.push(roundNextStep(!rest));
+  return {
+    title: `④ ${won != null ? teamName(won) : 'La famille'} remporte la manche`,
+    sub: `+${b.awardedValue || 0} pts. ${rest ? 'Révélez les réponses restantes pour le public (elles ne rapportent plus rien), puis passez à la suite.' : 'Passez à la suite.'}`,
+    actions,
+  };
+}
+
+let roundActions = [];
+let roundActionsSig = '';
+
+function renderRoundGuide(b) {
+  const g = roundGuide(b);
+  document.getElementById('rwTitle').textContent = g.title;
+  document.getElementById('rwSub').textContent = g.sub;
+  roundActions = g.actions;
+  const sig = g.actions.map((a) => `${a.label}|${a.cls || ''}|${a.primary ? 1 : 0}`).join('#');
+  if (sig !== roundActionsSig) {
+    roundActionsSig = sig;
+    const box = document.getElementById('rwActions');
+    box.innerHTML = g.actions
+      .map(
+        (a, k) =>
+          `<button class="btn ${a.cls || ''}${a.primary ? ' rw-primary' : ''}" data-k="${k}">${escapeHtml(a.label)}${a.primary ? ' <kbd>Entrée</kbd>' : ''}</button>`
+      )
+      .join('');
+    box.querySelectorAll('[data-k]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        const a = roundActions[Number(btn.dataset.k)];
+        if (a) a.fn();
+        btn.blur();
+      })
+    );
+  }
+  const idx = ROUND_PHASES.indexOf(roundPhase(b));
+  document.querySelectorAll('[data-rphase]').forEach((s, i) => {
+    s.classList.toggle('active', i === idx);
+    s.classList.toggle('done', i < idx);
+  });
+  document.getElementById('rwGuide').dataset.phase = roundPhase(b);
+}
+
+/** Entrée : l'action principale de l'étape en cours. */
+function runRoundPrimary() {
+  const a = roundActions.find((x) => x.primary);
+  if (a) a.fn();
+  return !!a;
+}
+
+document.querySelectorAll('[data-rphase]').forEach((s) =>
+  s.addEventListener('click', () => cmd('setRoundPhase', { phase: s.dataset.rphase }))
+);
+document.getElementById('rwInput').addEventListener('input', updateRoundHint);
+document.getElementById('rwInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitRoundInput();
+  }
+});
 
 // ------------------------------------------------------------------ //
 //  Manche finale : assistant pas à pas
@@ -774,15 +1079,12 @@ function renderFinal() {
   startBtn.classList.remove('btn--gold');
 
   if (fs.cells.length !== finalLen) {
-    const firstShow = finalLen === -1;
     finalLen = fs.cells.length;
     fCursorKey = '';
     ctrl.innerHTML = buildFinalScaffold(fs);
     wireFinalScaffold(ctrl);
     wireFinalCells(ctrl);
     wireFinalChips(ctrl);
-    // La carte est en bas de la page : on l'amène à l'écran quand la finale commence.
-    if (firstShow) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   updateFinalWizard(fs, ctrl);
   updateFinalLive(fs, ctrl);
@@ -953,8 +1255,7 @@ const normAns = (s) =>
  * ignorés), sinon inclusion dans un seul sens ou l'autre (« pentest » ≈
  * « Test d'intrusion (pentest) »), à condition qu'une seule proposition colle.
  */
-function finalMatch(q, text) {
-  const props = (state.finalState.questions[q] && state.finalState.questions[q].answers) || [];
+function matchAnswer(props, text) {
   const t = normAns(text);
   if (!t) return null;
   const exact = props.findIndex((a) => normAns(a.text) === t);
@@ -964,6 +1265,10 @@ function finalMatch(q, text) {
     .map((a, i) => ({ a, i, n: normAns(a.text) }))
     .filter(({ n }) => n.includes(t) || t.includes(n));
   return close.length === 1 ? { i: close[0].i, a: close[0].a, exact: false } : null;
+}
+
+function finalMatch(q, text) {
+  return matchAnswer((state.finalState.questions[q] && state.finalState.questions[q].answers) || [], text);
 }
 
 /** Doublon : même texte que le finaliste 1, ou même réponse du tableau. */
@@ -998,11 +1303,11 @@ function clearFinalCell(q, col) {
   cmd('setFinalCell', { q, col, answer: '', points: 0 });
   cmd('revealFinalCell', { q, col, revealed: false });
   sound('buzzer');
-  showFinalToast('⛔ Doublon ! Réponse effacée : demandez-en une autre.');
+  showToast('⛔ Doublon ! Réponse effacée : demandez-en une autre.');
 }
 
 let finalToastTimer;
-function showFinalToast(msg) {
+function showToast(msg) {
   let el = document.getElementById('finalToast');
   if (!el) {
     el = document.createElement('div');
@@ -1112,7 +1417,7 @@ function flagFinalDuplicate() {
   if (hasAnswer(c)) clearFinalCell(fCursor, 1);
   else {
     sound('buzzer');
-    showFinalToast('⛔ Doublon ! Demandez une autre réponse.');
+    showToast('⛔ Doublon ! Demandez une autre réponse.');
   }
   document.getElementById('fwAnswer').value = '';
   fPointsTouched = false;

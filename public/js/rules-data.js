@@ -57,10 +57,10 @@ const RULES = {
         'La famille gagnante choisit : jouer ou passer.',
       ],
       app: [
-        "Lancer une manche affiche la question et arme les buzzers ; « La main » est donnée à l'équipe qui buzze la première.",
-        "Révélez chaque réponse trouvée (clic sur la réponse ou touches <kbd>1</kbd> à <kbd>9</kbd>). Si l'autre équipe l'emporte au classement, ou si la main est passée, corrigez « La main » sur la carte du plateau.",
-        "Une réponse absente au face-à-face peut être sanctionnée d'un X à l'écran (touche <kbd>X</kbd>), mais ce n'est pas une faute de la manche : effacez-le (touche <kbd>C</kbd>) avant que la famille ne commence à jouer.",
-        'Aucune réponse trouvée : réarmez les buzzers (touche <kbd>B</kbd>) pour rejouer le face-à-face.',
+        "La carte « Manche en cours » de la régie guide chaque manche : face-à-face → jeu → vol → fin de manche, avec la consigne du moment et son bouton principal (touche <kbd>Entrée</kbd>).",
+        "Lancer une manche affiche la question et arme les buzzers. L'équipe qui buzze répond la première ; sans buzzers, indiquez-la d'un clic.",
+        "Pour chaque joueur, cliquez sa réponse au tableau (touches <kbd>1</kbd> à <kbd>9</kbd>), tapez-la dans « ce que dit le joueur », ou « Pas au tableau » (touche <kbd>X</kbd>). La régie compare les places et donne la main à la mieux classée, puis propose « joue » ou « passe ».",
+        "Les X du face-à-face s'affichent à l'écran mais ne comptent pas : ils sont effacés dès que la famille joue ou passe. Aucune réponse au tableau : « Rejouer le face-à-face » efface les X et réarme les buzzers.",
       ],
       tips: [
         "Annoncez la place de chaque réponse (« … c'est la réponse n°2 ! ») : le public comprend tout de suite qui prend la main.",
@@ -75,6 +75,10 @@ const RULES = {
         "<strong>Les fautes (X)</strong> : une réponse absente du tableau, déjà donnée, ou trop lente (environ 3 secondes) vaut un X. Au 3e X, la famille perd la main et l'adversaire tente un vol.",
         "<strong>Tableau complet</strong> : si la famille découvre toutes les réponses avant son 3e X, elle remporte la manche et la cagnotte ; il n'y a pas de vol.",
         "<strong>Réponses proches</strong> : l'animateur juge si une réponse correspond à une case (synonyme, pluriel, formulation différente du même sens). Fixez votre tolérance avant la partie et tenez-vous-y d'une manche à l'autre.",
+      ],
+      app: [
+        "Tapez ce que dit le joueur puis <kbd>Entrée</kbd> : si la réponse est au tableau (même formulée autrement), elle est révélée ; sinon, c'est un X. Vous pouvez aussi cliquer la réponse (touches <kbd>1</kbd> à <kbd>9</kbd>) et donner un X avec la touche <kbd>X</kbd>.",
+        'Au 3e X, la régie passe toute seule au vol. Tableau complet : un bouton donne directement la cagnotte à la famille.',
       ],
       tips: [
         "Annoncez le nombre de réponses au tableau avant que la famille ne commence (« il y a 6 réponses à trouver »).",
@@ -91,8 +95,8 @@ const RULES = {
         "Ensuite, on révèle les réponses restantes pour le public : elles ne rapportent plus de points.",
       ],
       app: [
-        "Vol réussi : révélez la réponse, puis « Donner la cagnotte » à la famille qui a volé. Vol raté : donnez la cagnotte à la famille qui jouait.",
-        "Donnez la cagnotte <strong>avant</strong> de révéler le reste du tableau (« Tout révéler », touche <kbd>R</kbd>) : une fois donnée, la cagnotte est figée et les réponses révélées ensuite ne comptent plus.",
+        "Cliquez (ou tapez) la réponse de la famille qui vole : si elle est au tableau, elle est révélée et la cagnotte lui revient automatiquement. Sinon, « Vol raté » (touche <kbd>X</kbd>) donne la cagnotte à la famille qui jouait.",
+        "Une fois donnée, la cagnotte est figée : « Révéler le reste » montre les réponses restantes au public sans toucher aux scores, puis « Manche suivante ».",
       ],
       tips: ["Laissez la famille adverse se concerter quelques secondes à voix basse, puis exigez une réponse claire du capitaine."],
     },

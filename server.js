@@ -69,6 +69,8 @@ const THEMES = ['dark', 'light', 'retro'];
 // Étapes de la manche finale (assistant de la régie) : préparation, saisie du
 // finaliste 1, révélation de ses réponses, saisie du finaliste 2, révélation finale.
 const FINAL_PHASES = ['setup', 'answer1', 'reveal1', 'answer2', 'reveal2'];
+// Étapes d'une manche (assistant de la régie) : face-à-face, jeu, vol, fin.
+const ROUND_PHASES = ['faceoff', 'play', 'steal', 'done'];
 let displayTheme = THEMES.includes((process.env.THEME || '').toLowerCase())
   ? process.env.THEME.toLowerCase()
   : 'dark';
@@ -326,7 +328,26 @@ function buildBoard(roundIndex) {
     activeTeamIndex: null,
     awarded: null,       // équipe ayant reçu la cagnotte (anti double-crédit)
     awardedValue: 0,     // montant crédité (pour pouvoir corriger l'attribution)
+    phase: 'faceoff',    // étape de la manche (cf. ROUND_PHASES)
+    // Face-à-face : équipe qui répond en premier, réponse de chaque équipe
+    // (index au tableau, -1 = absente, null = pas encore répondu), gagnant.
+    faceoff: { first: null, answers: [null, null], winner: null },
   };
+}
+
+/** Gagnant du face-à-face : réponse n°1 du premier, sinon la mieux classée des deux. */
+function faceoffWinner(fo) {
+  if (fo.first == null) return null;
+  const first = fo.first;
+  const second = 1 - first;
+  const a = fo.answers[first];
+  const b = fo.answers[second];
+  if (a === 0) return first;
+  if (a == null || b == null) return null; // on attend l'autre réponse
+  if (a >= 0 && b >= 0) return a < b ? first : second;
+  if (a >= 0) return first;
+  if (b >= 0) return second;
+  return null; // aucune réponse au tableau : face-à-face à rejouer
 }
 
 function buildFinalState() {
@@ -460,6 +481,8 @@ const handlers = {
     if (state.board) {
       state.board.strikes = Math.min(3, state.board.strikes + 1);
       endFaceOffIfArmed();
+      // 3e faute pendant le jeu : la famille adverse tente le vol.
+      if (state.board.phase === 'play' && state.board.strikes >= 3) state.board.phase = 'steal';
     }
   },
 
@@ -487,10 +510,88 @@ const handlers = {
     if (team) team.score += value;
     state.board.awarded = idx;
     state.board.awardedValue = value;
+    state.board.phase = 'done';
     // Marque la manche en cours comme jouée (progression / « Manche suivante »).
     if (state.currentRoundIndex >= 0 && !state.playedRounds.includes(state.currentRoundIndex)) {
       state.playedRounds.push(state.currentRoundIndex);
     }
+  },
+
+  // ---- Assistant de manche (régie) ----
+  // Face-à-face : équipe qui répond en premier (sans buzzers, ou correction du buzz).
+  faceoffFirst(p) {
+    const b = state.board;
+    if (!b || b.phase !== 'faceoff') return;
+    b.faceoff.first = Number(p.team) ? 1 : 0;
+    endFaceOffIfArmed();
+  },
+
+  // Face-à-face : réponse d'une équipe (index au tableau, ou -1 si absente).
+  // Toute réponse trouvée est révélée et compte ; la mieux classée donne la main.
+  faceoffAnswer(p) {
+    const b = state.board;
+    if (!b || b.phase !== 'faceoff') return;
+    const team = Number(p.team) ? 1 : 0;
+    const a = b.answers[Number(p.index)];
+    if (a && a.revealed) return; // déjà au tableau : le joueur doit en donner une autre
+    const fo = b.faceoff;
+    if (fo.first == null) fo.first = team;
+    fo.answers[team] = a ? Number(p.index) : -1;
+    if (a) a.revealed = true;
+    else b.strikes = Math.min(3, b.strikes + 1); // X affiché, effacé à la fin du face-à-face
+    state.view = 'board';
+    endFaceOffIfArmed();
+    fo.winner = faceoffWinner(fo);
+    if (fo.winner != null) b.activeTeamIndex = fo.winner;
+  },
+
+  // Face-à-face à rejouer (aucune réponse au tableau, ou erreur de saisie) :
+  // réponses du face-à-face recachées, X effacés, buzzers réarmés.
+  faceoffReset() {
+    const b = state.board;
+    if (!b) return;
+    b.faceoff.answers.forEach((i) => {
+      if (i >= 0 && b.answers[i]) b.answers[i].revealed = false;
+    });
+    b.faceoff = { first: null, answers: [null, null], winner: null };
+    b.phase = 'faceoff';
+    b.strikes = 0;
+    b.activeTeamIndex = null;
+    state.buzzer.armed = true;
+    state.buzzer.winner = null;
+  },
+
+  // Fin du face-à-face : la famille gagnante joue ou passe la main.
+  // Les X du face-à-face ne comptent pas comme fautes de la manche.
+  playOrPass(p) {
+    const b = state.board;
+    if (!b) return;
+    const winner = b.faceoff.winner ?? b.activeTeamIndex ?? 0;
+    b.activeTeamIndex = p && p.pass ? 1 - winner : winner;
+    b.phase = 'play';
+    b.strikes = 0;
+    endFaceOffIfArmed();
+  },
+
+  // Vol : réponse de la famille adverse (index au tableau, ou -1 si absente).
+  // Réussi : la réponse est révélée et la famille qui vole rafle la cagnotte ;
+  // raté : la cagnotte revient à la famille qui jouait.
+  stealResult(p) {
+    const b = state.board;
+    if (!b || b.phase !== 'steal' || b.activeTeamIndex == null) return;
+    const a = b.answers[Number(p.index)];
+    if (a && !a.revealed) {
+      a.revealed = true;
+      handlers.awardPot({ index: 1 - b.activeTeamIndex });
+    } else {
+      handlers.awardPot({ index: b.activeTeamIndex });
+    }
+  },
+
+  // Étape de la manche choisie à la main dans la régie (correction).
+  setRoundPhase(p) {
+    const phase = (p && p.phase ? p.phase : '').toString();
+    if (state.board && ROUND_PHASES.includes(phase)) state.board.phase = phase;
   },
 
   // ---- Manche finale ----
@@ -937,7 +1038,11 @@ io.on('connection', (socket) => {
       state.buzzer.winner = team;
       state.buzzer.armed = false;
       // L'équipe qui a buzzé prend la main sur le plateau en cours.
-      if (state.board) state.board.activeTeamIndex = team;
+      if (state.board) {
+        state.board.activeTeamIndex = team;
+        // Face-à-face : l'équipe qui buzze répond la première.
+        if (state.board.phase === 'faceoff' && state.board.faceoff.first == null) state.board.faceoff.first = team;
+      }
       // Le face-à-face est lancé : on passe au plateau (caché sous l'annonce du buzz,
       // l'écran de jeu fait ensuite glisser la question à sa place).
       if (state.board && state.view === 'question') state.view = 'board';
