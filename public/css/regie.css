@@ -5,6 +5,9 @@
 body.regie {
   overflow-y: auto;
   padding: 16px;
+  /* Hauteur libre (base.css fixe body à 100 %) : sinon le body s'arrête après un
+     écran et la barre d'état « sticky », bornée par lui, part avec le scroll. */
+  height: auto;
   min-height: 100vh;
 }
 
@@ -114,6 +117,16 @@ body.regie {
 }
 .btn--file {
   cursor: pointer;
+}
+.btn--toggle.locked {
+  border-color: var(--gold-1);
+  color: var(--gold-1);
+  animation: snd-locked 1.2s ease-in-out infinite;
+}
+@keyframes snd-locked {
+  50% {
+    box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.35);
+  }
 }
 .btn--toggle.off {
   opacity: 0.55;

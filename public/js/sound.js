@@ -51,6 +51,10 @@ const SoundManager = (() => {
   function isMuted() {
     return muted;
   }
+  /** L'audio a-t-il été débloqué par un geste sur cette page ? */
+  function isUnlocked() {
+    return unlocked && (!ctx || ctx.state === 'running');
+  }
 
   /** Relit la liste des fichiers de /sounds et précharge ceux du catalogue. */
   function scan() {
@@ -457,5 +461,5 @@ const SoundManager = (() => {
 
   scan();
 
-  return { catalog: CATALOG, play, stop, stopAll, handle, unlock, setMuted, isMuted, scan, fileFor, onChange };
+  return { catalog: CATALOG, play, stop, stopAll, handle, unlock, setMuted, isMuted, isUnlocked, scan, fileFor, onChange };
 })();

@@ -81,8 +81,22 @@ document.getElementById('authInput').addEventListener('keydown', (e) => {
 });
 document.getElementById('authInput').focus();
 
-// Débloque l'audio dès la première interaction de l'animateur.
-document.addEventListener('click', () => SoundManager.unlock(), { once: true });
+// Politique d'autoplay : le navigateur coupe le son d'une page tant qu'elle n'a
+// reçu aucun geste (clic, touche). Si l'animateur pilote et que personne ne touche
+// la régie, elle resterait muette : on débloque à la moindre interaction, et le
+// bouton « Son » signale l'état bloqué tant que ce n'est pas fait.
+let gestureUnlocked = false; // le geste en cours vient-il de débloquer le son ?
+['pointerdown', 'keydown'].forEach((ev) =>
+  document.addEventListener(
+    ev,
+    () => {
+      gestureUnlocked = !SoundManager.isUnlocked();
+      SoundManager.unlock();
+      setTimeout(refreshMuteBtn, 100); // laisse l'AudioContext reprendre
+    },
+    true
+  )
+);
 
 // ------------------------------------------------------------------ //
 //  Barre supérieure
@@ -129,13 +143,25 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 
 const muteBtn = document.getElementById('muteBtn');
+function refreshMuteBtn() {
+  const locked = !SoundManager.isUnlocked();
+  const muted = SoundManager.isMuted();
+  muteBtn.classList.toggle('locked', locked);
+  muteBtn.classList.toggle('off', !locked && muted);
+  muteBtn.textContent = locked ? '🔈 Activer le son' : muted ? '🔇 Muet' : '🔊 Son';
+  muteBtn.title = locked ? 'Le navigateur bloque le son tant que la page n’a pas été cliquée' : '';
+}
 muteBtn.addEventListener('click', () => {
-  SoundManager.unlock();
-  const nowMuted = !SoundManager.isMuted();
-  SoundManager.setMuted(nowMuted);
-  muteBtn.classList.toggle('off', nowMuted);
-  muteBtn.textContent = nowMuted ? '🔇 Muet' : '🔊 Son';
+  // Clic qui vient de débloquer le son : il sert juste à l'activer (pas à couper).
+  if (gestureUnlocked) {
+    gestureUnlocked = false;
+    refreshMuteBtn();
+    return;
+  }
+  SoundManager.setMuted(!SoundManager.isMuted());
+  refreshMuteBtn();
 });
+refreshMuteBtn();
 
 // Vues + victoire
 document.querySelectorAll('[data-view]').forEach((b) =>

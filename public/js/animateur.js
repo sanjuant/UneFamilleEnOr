@@ -195,8 +195,9 @@ function render() {
     .join('');
 
   // Phase
-  let phase = VIEW_LABELS[state.view] || state.view;
-  if (state.board) phase += ` · Manche ${state.currentRoundIndex + 1}`;
+  // Ce qu'affiche l'écran de jeu en ce moment (logo, question, plateau…).
+  let phase = '📺 Écran de jeu : ' + (VIEW_LABELS[state.view] || state.view);
+  if (state.board && state.view !== 'final') phase += ` · Manche ${state.currentRoundIndex + 1}`;
   $('animPhase').textContent = phase;
 
   // Bouton « Manche finale » : visible dès qu'une finale est définie.
