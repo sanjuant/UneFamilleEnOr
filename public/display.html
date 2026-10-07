@@ -6,6 +6,7 @@
   <title>Une Famille en Or — Écran de jeu</title>
   <link rel="stylesheet" href="/css/base.css" />
   <link rel="stylesheet" href="/css/display.css" />
+  <link rel="stylesheet" href="/css/retro.css" />
 </head>
 <body>
   <div class="studio-bg"></div>
@@ -14,7 +15,7 @@
   <!-- Overlay d'activation du son (politique d'autoplay des navigateurs) -->
   <div id="soundGate" class="sound-gate">
     <div class="sound-gate__card">
-      <div class="sound-gate__logo gold-text">UNE FAMILLE EN OR</div>
+      <div class="sound-gate__logo gold-text" data-text="UNE FAMILLE EN OR">UNE FAMILLE EN OR</div>
       <button id="soundGateBtn" class="sound-gate__btn">▶ Lancer l'écran de jeu</button>
       <p class="sound-gate__hint">Cliquez pour activer le son et passer en plein écran.</p>
     </div>
@@ -25,7 +26,7 @@
     <header class="scorebar">
       <div class="team team--left" id="teamLeft">
         <div class="team__name" data-team-name="0">ÉQUIPE 1</div>
-        <div class="team__score" data-team-score="0">0</div>
+        <div class="team__screen"><div class="team__score" data-team-score="0">0</div></div>
       </div>
       <div class="scorebar__center">
         <div class="pot" id="potBox">
@@ -37,7 +38,7 @@
       </div>
       <div class="team team--right" id="teamRight">
         <div class="team__name" data-team-name="1">ÉQUIPE 2</div>
-        <div class="team__score" data-team-score="1">0</div>
+        <div class="team__screen"><div class="team__score" data-team-score="1">0</div></div>
       </div>
     </header>
 
@@ -65,7 +66,7 @@
     <!-- VUE : manche finale -->
     <section class="view view--final" data-view="final">
       <div class="final-head">
-        <h2 class="final-title gold-text">MANCHE FINALE</h2>
+        <h2 class="final-title gold-text" data-text="MANCHE FINALE">MANCHE FINALE</h2>
         <div class="final-family-name" id="finalFamilyName"></div>
         <div class="final-active-banner" id="finalBanner">FINALISTE 1</div>
         <div class="final-timer-big" id="finalTimerBig"></div>
@@ -101,7 +102,7 @@
   <!-- QR de connexion des buzzers (affiché à la demande de la régie) -->
   <div class="join-qr" id="joinQr">
     <div class="join-qr__card">
-      <div class="join-qr__title gold-text">REJOIGNEZ LE BUZZER</div>
+      <div class="join-qr__title gold-text" data-text="REJOIGNEZ LE BUZZER">REJOIGNEZ LE BUZZER</div>
       <img class="join-qr__img" src="/qr/buzzer" alt="QR code buzzer" />
       <div class="join-qr__url" id="joinQrUrl"></div>
       <div class="join-qr__hint">Scannez avec votre téléphone</div>
@@ -114,6 +115,9 @@
   </div>
 
   <div class="conn-dot" id="connDot" title="Connexion"></div>
+
+  <!-- Thème rétro : tube cathodique (balayage, allumage, neige au changement de plan) -->
+  <div class="crt" id="crt" aria-hidden="true"><i class="crt__boot"></i><i class="crt__zap"></i></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/net-util.js"></script>

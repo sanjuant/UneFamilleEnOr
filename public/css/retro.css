@@ -1,0 +1,1036 @@
+/* ================================================================== *
+ *  THÈME « RÉTRO 90s » DE L'ÉCRAN DE JEU
+ *
+ *  Un samedi soir de 1992 devant le poste : tube cathodique (balayage,
+ *  coins bombés, allumage du tube, neige au changement de plan), plateau
+ *  bleu roi à rayons, cadres d'ampoules en chenillard, afficheurs à ampoules
+ *  pour les chiffres et les réponses, lettrage or chromé en relief.
+ *
+ *  Tout est conditionné à :root[data-theme='retro'] (posé par display.js) :
+ *  les thèmes sombre et clair ne sont pas touchés.
+ * ================================================================== */
+
+:root[data-theme='retro'] {
+  --bg-0: #030a2c;
+  --bg-1: #08196a;
+  --bg-2: #1238b0;
+  --panel: #061447;
+  --panel-edge: #ffcf33;
+  --white: #ffffff;
+  --muted: #a9c4ff;
+  --gold-1: #ffe066;
+  --gold-2: #ffcc22;
+  --gold-3: #e39a00;
+  --red: #ff2a2a;
+  --green: #3dff7a;
+  --glow-gold: 0 0 14px rgba(255, 204, 34, 0.5);
+  --font-led: 'VT323', 'Courier New', monospace;
+
+  /* Or chromé « à horizon » (rupture nette au milieu), typique des génériques de l'époque */
+  --gold-grad: linear-gradient(180deg, #fffbe0 0%, #ffe680 22%, #ffc21a 48%, #a85e00 50%, #ffb000 60%, #ffe27a 84%, #fff6c8 100%);
+  /* Plaque dorée (fond des badges et bandeaux à texte foncé) */
+  --gold-plate: linear-gradient(180deg, #fff3b0 0%, #ffd84a 42%, #f2a900 58%, #ffcc33 100%);
+  /* Biseau doré : arêtes claires en haut/à gauche, sombres en bas/à droite */
+  --bevel: #ffeb99 #b97800 #7d4d00 #ffd447;
+  /* Panneau bleu laqué (reflet net sur la moitié haute) */
+  --blue-lacquer: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0 47%, rgba(255, 255, 255, 0) 53%),
+    linear-gradient(180deg, #2c66f2 0%, #1240c4 55%, #0a2a93 100%);
+
+  /* Afficheurs à ampoules : ampoules éteintes visibles, allumées avec halo */
+  --lamp-on: #ffdf5c;
+  --lamp-off: rgba(255, 190, 40, 0.13);
+  --lamp-glow: 0 0 0.02em #fff6c8;
+  --dots: radial-gradient(circle, #000 0 45%, rgba(0, 0, 0, 0.45) 56%, transparent 64%);
+
+  /* Texte « carton télé » : ombre dure sans flou + léger décalage RVB du tube */
+  --tv-shadow: 0.05em 0.06em 0 #01061f, -2px 0 rgba(255, 0, 90, 0.4), 2px 0 rgba(0, 220, 255, 0.4);
+  /* Relief du lettrage or : extrusion en escalier + ombre portée */
+  --extrude: 0.008em 0.012em 0 #d08400, 0.016em 0.024em 0 #b56c00, 0.024em 0.036em 0 #995800,
+    0.032em 0.048em 0 #7e4600, 0.04em 0.06em 0 #643600, 0.048em 0.072em 0 #4c2800,
+    0.07em 0.11em 0.05em rgba(0, 0, 0, 0.6);
+
+  /* Étoile « explosion » (pastilles ×2, BUZZ !) */
+  --burst: polygon(50% 0%, 57.2% 13.7%, 69.1% 3.8%, 70.6% 19.2%, 85.4% 14.6%, 80.8% 29.4%, 96.2% 30.9%,
+    86.3% 42.8%, 100% 50%, 86.3% 57.2%, 96.2% 69.1%, 80.8% 70.6%, 85.4% 85.4%, 70.6% 80.8%, 69.1% 96.2%,
+    57.2% 86.3%, 50% 100%, 42.8% 86.3%, 30.9% 96.2%, 29.4% 80.8%, 14.6% 85.4%, 19.2% 70.6%, 3.8% 69.1%,
+    13.7% 57.2%, 0% 50%, 13.7% 42.8%, 3.8% 30.9%, 19.2% 29.4%, 14.6% 14.6%, 29.4% 19.2%, 30.9% 3.8%, 42.8% 13.7%);
+
+  /* Cadre d'ampoules (border-image 4×4 cases, « round » = nombre entier d'ampoules par côté).
+     A et B sont inversés : on alterne de l'un à l'autre pour le chenillard. */
+  --bulbs-a: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cdefs%3E%3CradialGradient id='o' cx='40%25' cy='35%25' r='65%25'%3E%3Cstop offset='0' stop-color='%23fffdf0'/%3E%3Cstop offset='.4' stop-color='%23ffe066'/%3E%3Cstop offset='1' stop-color='%23e08a00'/%3E%3C/radialGradient%3E%3CradialGradient id='h'%3E%3Cstop offset='.3' stop-color='%23ffc83d' stop-opacity='.9'/%3E%3Cstop offset='1' stop-color='%23ffc83d' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='f' cx='40%25' cy='35%25' r='65%25'%3E%3Cstop offset='0' stop-color='%23735519'/%3E%3Cstop offset='1' stop-color='%23221603'/%3E%3C/radialGradient%3E%3Cg id='L'%3E%3Ccircle r='9.6' fill='url(%23h)'/%3E%3Ccircle r='5.4' fill='url(%23o)'/%3E%3C/g%3E%3Cg id='D'%3E%3Ccircle r='5.4' fill='url(%23f)'/%3E%3Ccircle cx='-1.7' cy='-1.9' r='1.5' fill='%23fff' fill-opacity='.25'/%3E%3C/g%3E%3C/defs%3E%3Crect width='80' height='80' fill='%23040c30'/%3E%3Crect x='1' y='1' width='78' height='78' fill='none' stroke='%23ffcf33' stroke-width='2'/%3E%3Crect x='19' y='19' width='42' height='42' fill='none' stroke='%23a86c00' stroke-width='2'/%3E%3Cuse href='%23L' x='10' y='10'/%3E%3Cuse href='%23D' x='30' y='10'/%3E%3Cuse href='%23L' x='50' y='10'/%3E%3Cuse href='%23D' x='70' y='10'/%3E%3Cuse href='%23D' x='10' y='30'/%3E%3Cuse href='%23L' x='70' y='30'/%3E%3Cuse href='%23L' x='10' y='50'/%3E%3Cuse href='%23D' x='70' y='50'/%3E%3Cuse href='%23D' x='10' y='70'/%3E%3Cuse href='%23L' x='30' y='70'/%3E%3Cuse href='%23D' x='50' y='70'/%3E%3Cuse href='%23L' x='70' y='70'/%3E%3C/svg%3E");
+  --bulbs-b: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cdefs%3E%3CradialGradient id='o' cx='40%25' cy='35%25' r='65%25'%3E%3Cstop offset='0' stop-color='%23fffdf0'/%3E%3Cstop offset='.4' stop-color='%23ffe066'/%3E%3Cstop offset='1' stop-color='%23e08a00'/%3E%3C/radialGradient%3E%3CradialGradient id='h'%3E%3Cstop offset='.3' stop-color='%23ffc83d' stop-opacity='.9'/%3E%3Cstop offset='1' stop-color='%23ffc83d' stop-opacity='0'/%3E%3C/radialGradient%3E%3CradialGradient id='f' cx='40%25' cy='35%25' r='65%25'%3E%3Cstop offset='0' stop-color='%23735519'/%3E%3Cstop offset='1' stop-color='%23221603'/%3E%3C/radialGradient%3E%3Cg id='L'%3E%3Ccircle r='9.6' fill='url(%23h)'/%3E%3Ccircle r='5.4' fill='url(%23o)'/%3E%3C/g%3E%3Cg id='D'%3E%3Ccircle r='5.4' fill='url(%23f)'/%3E%3Ccircle cx='-1.7' cy='-1.9' r='1.5' fill='%23fff' fill-opacity='.25'/%3E%3C/g%3E%3C/defs%3E%3Crect width='80' height='80' fill='%23040c30'/%3E%3Crect x='1' y='1' width='78' height='78' fill='none' stroke='%23ffcf33' stroke-width='2'/%3E%3Crect x='19' y='19' width='42' height='42' fill='none' stroke='%23a86c00' stroke-width='2'/%3E%3Cuse href='%23D' x='10' y='10'/%3E%3Cuse href='%23L' x='30' y='10'/%3E%3Cuse href='%23D' x='50' y='10'/%3E%3Cuse href='%23L' x='70' y='10'/%3E%3Cuse href='%23L' x='10' y='30'/%3E%3Cuse href='%23D' x='70' y='30'/%3E%3Cuse href='%23D' x='10' y='50'/%3E%3Cuse href='%23L' x='70' y='50'/%3E%3Cuse href='%23L' x='10' y='70'/%3E%3Cuse href='%23D' x='30' y='70'/%3E%3Cuse href='%23L' x='50' y='70'/%3E%3Cuse href='%23D' x='70' y='70'/%3E%3C/svg%3E");
+  /* Neige du téléviseur (bruit en niveaux de gris) */
+  --tv-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.6 0 0 0 -.3 1.6 0 0 0 -.3 1.6 0 0 0 -.3 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------------- Tube cathodique ---------------- */
+.crt {
+  display: none;
+}
+[data-theme='retro'] .crt {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 400; /* au-dessus de tout, jingle vidéo compris */
+  pointer-events: none;
+  /* Coins arrondis du tube (l'ombre déborde hors écran et ne noircit que les coins) */
+  border-radius: 3.5vmin / 4.5vmin;
+  box-shadow: 0 0 0 5vmin #000, inset 0 0 9vmin rgba(0, 0, 0, 0.55);
+  background:
+    /* reflet de la dalle de verre */
+    radial-gradient(ellipse 55% 40% at 20% 6%, rgba(255, 255, 255, 0.07), transparent 70%),
+    /* lignes de balayage */
+    linear-gradient(rgba(0, 0, 0, 0.26) 0 1px, transparent 1px) 0 0 / 100% 3px,
+    /* vignettage du tube bombé */
+    radial-gradient(ellipse 85% 80% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.45) 100%);
+}
+@media (min-height: 1400px) {
+  [data-theme='retro'] .crt {
+    background-size: auto, 100% 5px, auto;
+  }
+}
+/* Bande de rafraîchissement qui descend lentement */
+[data-theme='retro'] .crt::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -25vh;
+  height: 22vh;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.035) 50%, transparent);
+  animation: crt-roll 9s linear infinite;
+}
+@keyframes crt-roll {
+  to {
+    transform: translateY(150vh);
+  }
+}
+
+/* Allumage du tube : un point, une ligne, puis l'image (déclenché par display.js) */
+.crt__boot,
+.crt__zap {
+  position: absolute;
+  opacity: 0;
+}
+.crt__boot {
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 2px;
+  translate: -50% -50%;
+  background: #fff;
+  box-shadow: 0 0 40px 14px rgba(255, 255, 255, 0.85), 0 0 0 150vmax #000;
+}
+.crt.boot .crt__boot {
+  animation: crt-boot 1.1s ease-out forwards;
+}
+@keyframes crt-boot {
+  0% {
+    opacity: 1;
+    width: 0;
+    height: 2px;
+  }
+  20% {
+    opacity: 1;
+    width: 100vw;
+    height: 2px;
+  }
+  42% {
+    opacity: 1;
+    width: 100vw;
+    height: 100vh;
+  }
+  100% {
+    opacity: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+}
+
+/* Neige au changement de plan (déclenché par display.js) */
+.crt__zap {
+  inset: 0;
+  background: var(--tv-noise) 0 0 / 220px 220px, rgba(150, 160, 185, 0.35);
+}
+.crt.zap .crt__zap {
+  animation: crt-zap 0.42s steps(1, end) forwards;
+}
+@keyframes crt-zap {
+  0% {
+    opacity: 0.9;
+    background-position: 0 0, 0 0;
+  }
+  20% {
+    opacity: 0.8;
+    background-position: 61px 137px, 0 0;
+  }
+  40% {
+    opacity: 0.55;
+    background-position: 143px 29px, 0 0;
+  }
+  60% {
+    opacity: 0.3;
+    background-position: 17px 91px, 0 0;
+  }
+  80% {
+    opacity: 0.12;
+    background-position: 101px 173px, 0 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Coupe « télé » à l'arrivée d'une vue : l'image accroche puis se stabilise */
+[data-theme='retro'] .stage .view {
+  animation: tv-cut 0.45s ease-out;
+}
+@keyframes tv-cut {
+  0% {
+    opacity: 0;
+    transform: translateX(-3%) skewX(8deg);
+    filter: brightness(2.2);
+  }
+  22% {
+    opacity: 1;
+    transform: translateX(2%) skewX(-5deg);
+  }
+  45% {
+    transform: translateX(-0.8%) skewX(2deg);
+    filter: brightness(1.3);
+  }
+  70% {
+    transform: translateX(0.3%) skewX(0deg);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Secousse de l'image lors d'une faute */
+[data-theme='retro'] body.shake .stage {
+  animation: tv-shake 0.5s linear;
+}
+@keyframes tv-shake {
+  10% {
+    transform: translate(-1.4vmin, 0.6vmin);
+  }
+  25% {
+    transform: translate(1.2vmin, -0.8vmin);
+  }
+  40% {
+    transform: translate(-0.9vmin, 0.5vmin);
+  }
+  60% {
+    transform: translate(0.6vmin, -0.3vmin);
+  }
+  80% {
+    transform: translate(-0.3vmin, 0.2vmin);
+  }
+}
+
+/* ---------------- Décor : plateau bleu à rayons + paillettes ---------------- */
+/* Le fond du <body> se peint par-dessus les calques en z-index négatif
+   (.studio-bg, .rays) : on le rend transparent pour les laisser voir. */
+[data-theme='retro'] body {
+  background: transparent;
+}
+[data-theme='retro'] .rays {
+  z-index: -2;
+  opacity: 1;
+  background: #071c70;
+}
+[data-theme='retro'] .rays::before {
+  top: 50%;
+  left: 50%;
+  width: 260vmax;
+  height: 260vmax;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(from 0deg, #0e31aa 0deg 7.5deg, #08207e 7.5deg 15deg);
+  animation: retro-spin 220s linear infinite;
+}
+@keyframes retro-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(1turn);
+  }
+}
+/* Halo de projecteur au centre + bords plongés dans le noir */
+[data-theme='retro'] .studio-bg {
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 50% 42% at 50% 45%, rgba(80, 150, 255, 0.38), transparent 70%),
+    radial-gradient(ellipse 110% 95% at 50% 50%, transparent 38%, rgba(1, 5, 30, 0.9) 100%);
+}
+[data-theme='retro'] .studio-bg::after {
+  opacity: 1;
+  mix-blend-mode: normal;
+  background-image:
+    radial-gradient(circle, rgba(255, 240, 180, 0.95) 0 1.3px, transparent 2.2px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 1px, transparent 1.8px);
+  background-size: 230px 190px, 330px 270px;
+  background-position: 30px 50px, 150px 10px;
+  animation: twinkle 2.8s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+/* ---------------- Cadres d'ampoules en chenillard ---------------- */
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon) {
+  position: relative;
+}
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::before,
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--mq, 18px));
+  border: var(--mq, 18px) solid transparent;
+  border-image: var(--bulbs-a) 20 / var(--mq, 18px) round;
+  pointer-events: none;
+}
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::after {
+  border-image-source: var(--bulbs-b);
+  animation: chase 0.9s steps(1, end) infinite;
+}
+@keyframes chase {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---------------- Lettrage or en relief ---------------- *
+ * L'élément porte l'extrusion (texte foncé + ombres en escalier + contour),
+ * son ::after (même texte via data-text, posé par display.js / le HTML)
+ * porte la face en or chromé et le reflet qui la balaie.                    */
+[data-theme='retro'] [data-text] {
+  position: relative;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: #c27800;
+  -webkit-text-stroke: 0.05em #02082a;
+  text-shadow: var(--extrude);
+  filter: none;
+  padding: 0;
+}
+[data-theme='retro'] [data-text]::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  color: transparent;
+  background:
+    linear-gradient(105deg, transparent 44%, rgba(255, 255, 255, 0.95) 50%, transparent 56%) 150% 0 / 300% 100% no-repeat,
+    var(--gold-grad) 0 0 / 100% 1lh repeat-y;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: glint 5.5s ease-in-out infinite;
+}
+@keyframes glint {
+  0%,
+  65% {
+    background-position: 150% 0, 0 0;
+  }
+  100% {
+    background-position: -50% 0, 0 0;
+  }
+}
+
+/* ---------------- Afficheurs à ampoules ---------------- *
+ * Fond = ampoules éteintes, texte = ampoules allumées : le masque à points
+ * découpe les deux à la même grille.                                        */
+[data-theme='retro'] :is(.team__score, .pot__value, .slot__text, .slot__points, .fcell .ftext, .fcell .fpts, .final-timer-big, .fpp-text) {
+  color: var(--lamp-on);
+  background: var(--lamp-off);
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  text-shadow: var(--lamp-glow);
+  filter: none;
+  border-radius: 3px;
+  -webkit-mask: var(--dots) 0 0 / max(2.5px, 0.072em) max(2.5px, 0.072em) round;
+  mask: var(--dots) 0 0 / max(2.5px, 0.072em) max(2.5px, 0.072em) round;
+}
+/* Chiffres : police à matrice de points */
+[data-theme='retro'] :is(.team__score, .pot__value, .slot__points, .fcell .fpts, .final-timer-big, .fpp-text) {
+  font-family: var(--font-led);
+  letter-spacing: 0.04em;
+}
+/* Réponses : lettres capitales pleines, aérées pour rester lisibles en ampoules */
+[data-theme='retro'] :is(.slot__text, .fcell .ftext) {
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* Chaque lettre s'allume l'une après l'autre (ampoules qui chauffent) */
+[data-theme='retro'] .lamps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+[data-theme='retro'] .lamp {
+  display: inline-block;
+  white-space: pre;
+}
+[data-theme='retro'] :is(.slot.revealed, .fcell.revealed) .lamp {
+  animation: lamp-on 0.42s linear both;
+  animation-delay: calc(0.3s + var(--i, 0) * 45ms);
+}
+@keyframes lamp-on {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.3;
+  }
+  70%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ---------------- Barre des scores ---------------- */
+[data-theme='retro'] .team {
+  background: var(--blue-lacquer);
+  border: 3px solid;
+  border-color: var(--bevel);
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px #01061f, inset 0 0 0 2px rgba(0, 0, 0, 0.35), 0 8px 0 rgba(0, 0, 0, 0.35),
+    0 12px 24px rgba(0, 0, 0, 0.5);
+}
+[data-theme='retro'] .team__name {
+  color: #fff;
+  letter-spacing: 0.04em;
+  text-shadow: var(--tv-shadow);
+}
+/* Écran noir encastré qui accueille le compteur */
+[data-theme='retro'] .team__screen {
+  background: #000;
+  border-radius: 5px;
+  padding: clamp(3px, 0.6vh, 8px) clamp(5px, 0.6vw, 10px);
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.9), 0 0 0 2px #000, 0 1px 0 3px rgba(255, 255, 255, 0.2);
+}
+[data-theme='retro'] .team__score {
+  min-width: 3ch;
+  padding: 0 0.08em;
+  line-height: 1;
+  text-align: right;
+}
+
+/* Cagnotte : écran noir cerclé d'or, multiplicateur en pastille « explosion » */
+[data-theme='retro'] .pot {
+  background: #000;
+  border: 4px solid;
+  border-color: var(--bevel);
+  border-radius: 8px;
+  padding: clamp(4px, 0.8vh, 10px) clamp(10px, 1.4vw, 22px) clamp(6px, 1vh, 12px);
+  box-shadow: 0 0 0 2px #01061f, inset 0 4px 14px rgba(0, 0, 0, 0.9), 0 0 34px rgba(255, 190, 0, 0.3);
+}
+[data-theme='retro'] .pot__label {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.35em;
+  color: var(--gold-1);
+  margin-bottom: 2px;
+}
+[data-theme='retro'] .pot__value {
+  min-width: 3ch;
+  padding: 0 0.06em;
+}
+[data-theme='retro'] .pot__mult {
+  position: absolute;
+  top: -1.2em;
+  right: -1.9em;
+  display: grid;
+  place-items: center;
+  width: 2.7em;
+  height: 2.7em;
+  font-family: var(--font-display);
+  font-size: clamp(14px, 1.5vw, 26px);
+  color: #fff;
+  text-shadow: 0.06em 0.07em 0 #5a0000;
+  background: radial-gradient(circle at 40% 35%, #ff7a4d, #e0001b 60%, #9c0010);
+  clip-path: var(--burst);
+  animation: wobble 1.6s ease-in-out infinite;
+}
+[data-theme='retro'] .pot__mult:empty {
+  display: none;
+}
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(10deg) scale(1);
+  }
+  50% {
+    transform: rotate(-4deg) scale(1.1);
+  }
+}
+
+/* Fautes : X rouges au néon dans des cases noires */
+[data-theme='retro'] .strikes {
+  gap: clamp(6px, 0.8vw, 12px);
+}
+[data-theme='retro'] .strikes__x {
+  display: grid;
+  place-items: center;
+  width: 1.15em;
+  height: 1.15em;
+  font-size: clamp(22px, 3vw, 50px);
+  color: #ff3b3b;
+  background: #140000;
+  border: 3px solid;
+  border-color: #ff7a7a #8a0000 #5c0000 #ff4d4d;
+  border-radius: 5px;
+  -webkit-text-stroke: 0.06em #ff3b3b; /* tube de néon plus épais */
+  text-shadow: 0 0 0.04em #fff, 0 0 0.12em #ff1a1a, 0 0 0.35em #ff0000;
+  box-shadow: 0 0 0 2px #000, 0 0 18px rgba(255, 0, 0, 0.45);
+}
+/* Grand X plein écran : néon qui s'allume en grésillant */
+[data-theme='retro'] .big-x span {
+  display: grid;
+  place-items: center;
+  width: 64vh;
+  height: 64vh;
+  font-size: 56vh;
+  line-height: 1;
+  color: #ff3030;
+  background: rgba(16, 0, 0, 0.88);
+  border: 1.4vh solid;
+  border-color: #ff7a7a #8a0000 #5c0000 #ff4d4d;
+  border-radius: 2.4vh;
+  -webkit-text-stroke: 0.035em #ff3030;
+  text-shadow: 0 0 0.02em #fff, 0 0 0.06em #ff1a1a, 0 0 0.18em #ff0000;
+  box-shadow: 0 0 0 0.6vh #000, 0 0 12vh rgba(255, 0, 0, 0.55);
+  animation: bigx-neon 0.9s linear forwards;
+}
+@keyframes bigx-neon {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  /* un seul grésillement (pas de clignotement rapide plein écran) */
+  18% {
+    opacity: 0.55;
+  }
+  28%,
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+/* ---------------- Logo ---------------- */
+[data-theme='retro'] .logo-wrap {
+  --mq: clamp(14px, 1.7vw, 28px);
+  padding: clamp(16px, 4vh, 54px) clamp(24px, 5vw, 90px);
+  background: radial-gradient(ellipse 90% 130% at 50% 0%, #2c66ff 0%, #1036b4 45%, #061a6b 100%);
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px #01061f, 0 22px 44px rgba(0, 0, 0, 0.6), inset 0 0 50px rgba(0, 0, 0, 0.45);
+}
+[data-theme='retro'] .logo-title {
+  font-size: clamp(44px, 9.5vw, 180px);
+  letter-spacing: 0.03em;
+  line-height: 1;
+  animation: none;
+  transform: skewX(-7deg);
+}
+[data-theme='retro'] .logo-sub {
+  color: var(--gold-1);
+  letter-spacing: 0.9em;
+  text-shadow: 0 0 10px rgba(255, 200, 40, 0.9), 0.05em 0.06em 0 #01061f;
+  animation: twinkle 1.2s steps(2, jump-none) infinite alternate;
+}
+
+/* ---------------- Question ---------------- */
+/* Cartouche bleu laqué cerclé d'or (comme les cartons de question de l'époque).
+   .q-fly (question qui glisse vers le plateau) reprend le même habillage. */
+[data-theme='retro'] :is(.question-text, .board-question, .q-fly) {
+  width: fit-content;
+  margin-inline: auto;
+  color: #fff;
+  text-shadow: var(--tv-shadow);
+  background: var(--blue-lacquer);
+  border: 0.06em solid;
+  border-color: var(--bevel);
+  border-radius: 0.12em;
+  box-shadow: 0 0 0 0.03em #01061f, 0 0.12em 0 rgba(0, 0, 0, 0.35), 0 0.2em 0.5em rgba(0, 0, 0, 0.4);
+}
+[data-theme='retro'] .question-text {
+  max-width: 90%;
+  padding: 0.25em 0.65em 0.3em;
+}
+[data-theme='retro'] .board-question {
+  max-width: 96%;
+  padding: 0.14em 0.7em 0.18em;
+}
+[data-theme='retro'] .q-fly {
+  padding: 0.18em 0.7em 0.22em;
+}
+/* Badge de manche : plaque dorée + multiplicateur en « explosion » */
+[data-theme='retro'] .round-badge {
+  position: relative;
+  color: #2a1500;
+  background: var(--gold-plate);
+  border: 0.08em solid;
+  border-color: var(--bevel);
+  border-radius: 0.18em;
+  padding: 0.12em 1em 0.16em;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0.05em 0 rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 0.05em #01061f, 0 0.12em 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(255, 200, 0, 0.35);
+}
+[data-theme='retro'] .round-badge__mult {
+  position: absolute;
+  top: -0.85em;
+  right: -1.35em;
+  display: grid;
+  place-items: center;
+  width: 2.3em;
+  height: 2.3em;
+  margin: 0;
+  font-size: 0.8em;
+  letter-spacing: 0;
+  color: #fff;
+  text-shadow: 0.06em 0.07em 0 #5a0000;
+  background: radial-gradient(circle at 40% 35%, #ff7a4d, #e0001b 60%, #9c0010);
+  clip-path: var(--burst);
+  animation: wobble 1.6s ease-in-out infinite;
+}
+
+/* ---------------- Plateau ---------------- */
+/* Le grand tableau : fond noir bleuté encadré d'ampoules */
+[data-theme='retro'] .view--board .board {
+  --mq: clamp(12px, 1.3vw, 22px);
+  margin: var(--mq);
+  padding: clamp(8px, 1.3vh, 16px);
+  gap: clamp(6px, 1.1vh, 14px);
+  background: linear-gradient(180deg, #05124d, #020823);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85);
+}
+[data-theme='retro'] .board.single {
+  max-width: 940px;
+  margin-inline: auto;
+}
+
+/* Une réponse = une tuile à cadre doré biseauté */
+[data-theme='retro'] .slot {
+  container-type: size;
+  background: #010414;
+  border: 3px solid;
+  border-color: var(--bevel);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #000, inset 0 0 18px rgba(0, 0, 0, 0.9);
+}
+/* Face cachée : panneau bleu laqué, numéro dans une pastille ovale dorée */
+[data-theme='retro'] .slot__num {
+  z-index: 2; /* au-dessus de l'afficheur (que son filter place dans un calque à part) */
+  isolation: isolate;
+  font-family: var(--font-display);
+  font-size: 56cqh;
+  color: #2a1500;
+  text-shadow: 0 0.04em 0 rgba(255, 255, 255, 0.6);
+  background: var(--blue-lacquer);
+  filter: none;
+}
+[data-theme='retro'] .slot__num::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: 1.75em;
+  height: 1.18em;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 28%, #fff7cc 0%, #ffd84a 38%, #e89a00 75%, #a86400 100%);
+  box-shadow: 0 0 0 0.045em #5a3300, 0 0 0 0.09em #ffcf33, 0 0 0 0.12em #01061f,
+    inset 0 -0.07em 0.1em rgba(120, 60, 0, 0.6), 0 0 0.35em rgba(255, 200, 40, 0.5);
+}
+/* Face révélée : afficheur à ampoules (réponse) + compteur (points) */
+[data-theme='retro'] .slot__answer {
+  opacity: 1;
+  transition: none;
+  align-items: stretch;
+  gap: 2.5cqi;
+  padding: 9cqh 2.4cqi;
+  /* Halo des ampoules allumées (hors du masque, sinon il allumerait les voisines) */
+  filter: drop-shadow(0 0 4px rgba(255, 170, 0, 0.75));
+}
+[data-theme='retro'] .slot__text {
+  flex: 1;
+  min-width: 0;
+  font-size: min(calc(118cqi / var(--n, 8)), 50cqh);
+}
+[data-theme='retro'] .slot__points {
+  display: grid;
+  place-items: center;
+  min-width: 2.2ch;
+  margin: 0;
+  padding: 0 0.12em;
+  font-size: 92cqh; /* VT323 : chiffres petits dans leur cadratin */
+  line-height: 0.8;
+  box-shadow: none;
+}
+[data-theme='retro'] .slot:not(.revealed) .slot__points {
+  color: transparent;
+  text-shadow: none;
+}
+[data-theme='retro'] .slot.revealed {
+  border-color: var(--bevel);
+  box-shadow: inset 0 0 0 2px #000, inset 0 0 18px rgba(0, 0, 0, 0.9), 0 0 16px rgba(255, 190, 0, 0.35);
+}
+[data-theme='retro'] .slot.revealed .slot__points {
+  animation: lamp-on 0.42s linear both;
+  animation-delay: 0.3s;
+}
+
+/* ---------------- Manche finale ---------------- */
+[data-theme='retro'] .final-head {
+  gap: clamp(4px, 0.8vh, 10px);
+}
+[data-theme='retro'] .final-title {
+  letter-spacing: 0.04em;
+  transform: skewX(-7deg);
+}
+[data-theme='retro'] .final-family-name {
+  font-family: var(--font-display);
+  color: var(--gold-1);
+  letter-spacing: 0.18em;
+  text-shadow: var(--tv-shadow);
+}
+/* Finaliste en jeu : bandeau rouge cerclé d'or */
+[data-theme='retro'] .final-active-banner {
+  color: #fff;
+  background: linear-gradient(180deg, #ff6a5a 0%, #e0101e 47%, #b0000e 53%, #d0081a 100%);
+  border: 0.07em solid;
+  border-color: var(--bevel);
+  border-radius: 0.14em;
+  padding: 0.08em 1.1em 0.12em;
+  letter-spacing: 0.06em;
+  text-shadow: 0.05em 0.06em 0 #4a0000;
+  box-shadow: 0 0 0 0.04em #01061f, 0 0.12em 0 rgba(0, 0, 0, 0.4);
+}
+/* Chrono : compteur à ampoules rouges */
+[data-theme='retro'] .final-timer-big {
+  --lamp-on: #ff5546;
+  --lamp-off: rgba(255, 50, 40, 0.14);
+  --lamp-glow: 0 0 0.02em #ffd8d0;
+  font-size: clamp(30px, 5vw, 76px);
+  line-height: 1;
+  padding: 0 0.25em;
+}
+[data-theme='retro'] .final-timer-big.low {
+  text-shadow: var(--lamp-glow);
+}
+[data-theme='retro'] .final-colheads span {
+  color: #2a1500;
+  background: var(--gold-plate);
+  border: 0.08em solid;
+  border-color: var(--bevel);
+  border-radius: 0.15em;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0.05em 0 rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 0.05em #01061f;
+}
+[data-theme='retro'] .fcell {
+  container-type: size;
+  align-items: stretch;
+  /* Pas d'unités cq ici : elles viseraient un conteneur parent (l'élément ne se mesure pas lui-même) */
+  gap: clamp(6px, 0.8vw, 14px);
+  padding: clamp(3px, 0.5vh, 6px) clamp(8px, 1vw, 16px);
+  background: #010414;
+  border: 3px solid;
+  border-color: var(--bevel);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #000, inset 0 0 16px rgba(0, 0, 0, 0.9);
+}
+[data-theme='retro'] .fcell .ftext,
+[data-theme='retro'] .fcell .fpts {
+  opacity: 1;
+  transition: none;
+}
+[data-theme='retro'] .fcell .ftext {
+  flex: 1;
+  min-width: 0;
+  font-size: min(calc(112cqi / var(--n, 8)), 74cqh);
+}
+[data-theme='retro'] .fcell .fpts {
+  display: grid;
+  place-items: center;
+  min-width: 2.2ch;
+  margin: 0;
+  padding: 0 0.1em;
+  font-size: 92cqh; /* VT323 : chiffres petits dans leur cadratin */
+  line-height: 0.8;
+}
+[data-theme='retro'] .fcell:not(.revealed) .lamp {
+  visibility: hidden;
+}
+[data-theme='retro'] .fcell:not(.revealed) .fpts {
+  color: transparent;
+  text-shadow: none;
+}
+[data-theme='retro'] .fcell.revealed {
+  border-color: var(--bevel);
+  box-shadow: inset 0 0 0 2px #000, inset 0 0 16px rgba(0, 0, 0, 0.9), 0 0 14px rgba(255, 190, 0, 0.3);
+}
+[data-theme='retro'] .fcell.revealed .fpts {
+  animation: lamp-on 0.42s linear both;
+  animation-delay: 0.3s;
+}
+/* Réponse du finaliste 1 masquée au public */
+[data-theme='retro'] .fcell.masked {
+  justify-content: center;
+  align-items: center;
+}
+[data-theme='retro'] .fcell.masked .ftext,
+[data-theme='retro'] .fcell.masked .fpts {
+  display: none;
+}
+[data-theme='retro'] .fcell.masked::after {
+  content: '?  ?  ?';
+  margin: 0;
+  font-size: 56cqh;
+  letter-spacing: 0.2em;
+  color: var(--gold-1);
+  text-shadow: 0 0 12px rgba(255, 190, 0, 0.6);
+  opacity: 0.85;
+}
+/* Progression vers l'objectif : bargraphe à segments, comme un VU-mètre */
+[data-theme='retro'] .fpp-bar {
+  height: clamp(18px, 3.2vh, 32px);
+  padding: 3px;
+  background: repeating-linear-gradient(90deg, rgba(255, 190, 40, 0.14) 0 0.9vw, transparent 0.9vw 1.2vw), #000;
+  background-origin: content-box;
+  background-clip: content-box;
+  background-color: #000;
+  border: 3px solid;
+  border-color: var(--bevel);
+  border-radius: 5px;
+  box-shadow: 0 0 0 2px #01061f;
+}
+[data-theme='retro'] .fpp-fill {
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, #ffd84a 0 0.9vw, transparent 0.9vw 1.2vw);
+  box-shadow: none;
+  filter: drop-shadow(0 0 5px rgba(255, 160, 0, 0.9));
+}
+[data-theme='retro'] .fpp-fill.done {
+  background: repeating-linear-gradient(90deg, #6bff95 0 0.9vw, transparent 0.9vw 1.2vw);
+  filter: drop-shadow(0 0 5px rgba(40, 255, 110, 0.9));
+}
+[data-theme='retro'] .fpp-text {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 0 0.3em;
+  line-height: 1;
+}
+[data-theme='retro'] .fpp-text.done {
+  --lamp-on: #6bff95;
+  --lamp-off: rgba(60, 255, 120, 0.13);
+  --lamp-glow: 0 0 0.02em #d8ffe4;
+  color: var(--lamp-on);
+}
+
+/* ---------------- Vainqueur ---------------- */
+[data-theme='retro'] .winner-wrap {
+  --mq: clamp(14px, 1.6vw, 26px);
+  padding: clamp(14px, 3.5vh, 44px) clamp(30px, 6vw, 110px) clamp(18px, 4vh, 50px);
+  background: radial-gradient(ellipse 90% 130% at 50% 0%, #2c66ff 0%, #1036b4 45%, #061a6b 100%);
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px #01061f, 0 22px 44px rgba(0, 0, 0, 0.6), inset 0 0 50px rgba(0, 0, 0, 0.45);
+}
+[data-theme='retro'] .winner-crown {
+  line-height: 1;
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0.02em 0.03em 0 #b56c00) drop-shadow(0.02em 0.03em 0 #7e4600)
+    drop-shadow(0 0 0.15em rgba(255, 200, 40, 0.6));
+}
+[data-theme='retro'] .winner-label {
+  display: inline-block;
+  margin: 0.3em 0 0.25em;
+  padding: 0.05em 0.75em 0.08em 1.05em; /* l'interlettrage ajoute de l'air à droite */
+  font-family: var(--font-display);
+  letter-spacing: 0.3em;
+  color: #fff;
+  background: linear-gradient(180deg, #ff6a5a 0%, #e0101e 47%, #b0000e 53%, #d0081a 100%);
+  border: 0.08em solid;
+  border-color: var(--bevel);
+  border-radius: 0.15em;
+  text-shadow: 0.05em 0.06em 0 #4a0000;
+  box-shadow: 0 0 0 0.05em #01061f, 0 0.12em 0 rgba(0, 0, 0, 0.4);
+}
+[data-theme='retro'] .winner-name {
+  transform: skewX(-7deg);
+}
+[data-theme='retro'] .winner-score {
+  margin-top: 0.35em;
+  color: #fff;
+  text-shadow: var(--tv-shadow);
+  letter-spacing: 0.04em;
+}
+
+/* ---------------- Buzzers (face-à-face) ---------------- */
+[data-theme='retro'] .buzz-overlay.armed::before {
+  background: radial-gradient(circle at 50% 50%, rgba(3, 10, 44, 0.5), rgba(3, 10, 44, 0.88));
+}
+[data-theme='retro'] .bz-ribbon {
+  --mq: clamp(12px, 1.3vw, 22px);
+  color: #fff;
+  background: linear-gradient(180deg, #ff6a5a 0%, #e0101e 47%, #b0000e 53%, #d0081a 100%);
+  border: 0.06em solid;
+  border-color: var(--bevel);
+  border-radius: 0.1em;
+  padding: 0.22em 1.2em 0.26em;
+  text-shadow: 0.05em 0.06em 0 #4a0000;
+  box-shadow: 0 0 0 0.03em #01061f, 0 0.12em 0 rgba(0, 0, 0, 0.4);
+}
+[data-theme='retro'] .buzz-overlay.winner {
+  background: radial-gradient(circle at 50% 50%, rgba(10, 40, 160, 0.85), rgba(3, 10, 44, 0.97));
+}
+/* Le ✋ devient une explosion de BD « BUZZ ! » */
+[data-theme='retro'] .bz-icon {
+  display: grid;
+  place-items: center;
+  width: clamp(150px, 20vw, 300px);
+  aspect-ratio: 1;
+  margin: 0 auto 0.15em;
+  font-size: 0;
+  background: radial-gradient(circle at 40% 35%, #fff59a, #ffd000 55%, #f08a00);
+  clip-path: var(--burst);
+  filter: none;
+  animation: wobble 0.9s ease-in-out infinite;
+}
+[data-theme='retro'] .bz-icon::before {
+  content: 'BUZZ !';
+  font-family: var(--font-display);
+  font-size: clamp(30px, 4.4vw, 66px);
+  color: #e0001b;
+  text-shadow: 0.04em 0.05em 0 #5a0000;
+  rotate: -8deg;
+}
+[data-theme='retro'] .bz-team {
+  transform: skewX(-7deg);
+}
+[data-theme='retro'] .bz-sub {
+  margin-top: 0.2em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-shadow: var(--tv-shadow);
+}
+
+/* ---------------- QR des buzzers ---------------- */
+[data-theme='retro'] .join-qr {
+  background: radial-gradient(circle at 50% 50%, rgba(10, 40, 160, 0.9), rgba(3, 10, 44, 0.98));
+}
+/* Balayage atténué pendant l'affichage du QR, pour ne pas gêner la lecture par les téléphones */
+[data-theme='retro'] .join-qr.show ~ .crt {
+  opacity: 0.35;
+}
+[data-theme='retro'] .join-qr__img {
+  border-radius: 4px;
+  border: 6px solid;
+  border-color: var(--bevel);
+  box-shadow: 0 0 0 3px #01061f, 0 0 50px rgba(255, 200, 0, 0.35);
+}
+[data-theme='retro'] .join-qr__url {
+  font-family: var(--font-led);
+  font-size: clamp(20px, 2.8vw, 38px);
+  color: var(--lamp-on);
+  text-shadow: var(--lamp-glow);
+}
+[data-theme='retro'] .join-qr__hint {
+  color: #fff;
+  text-shadow: var(--tv-shadow);
+}
+
+/* ---------------- Écran d'activation du son ---------------- */
+[data-theme='retro'] .sound-gate {
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, #1238b0, #061a6b 60%, #020820);
+}
+[data-theme='retro'] .sound-gate__logo {
+  transform: skewX(-7deg);
+}
+/* Gros bouton biseauté qui s'enfonce */
+[data-theme='retro'] .sound-gate__btn {
+  color: #2a1500;
+  background: var(--gold-plate);
+  border: 0.1em solid;
+  border-color: var(--bevel);
+  border-radius: 0.2em;
+  text-transform: uppercase;
+  text-shadow: 0 0.05em 0 rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0.16em 0 #6b3d00, 0 0.16em 0 0.05em #01061f, 0 0.3em 0.4em rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+[data-theme='retro'] .sound-gate__btn:hover {
+  transform: none;
+  filter: brightness(1.08);
+}
+[data-theme='retro'] .sound-gate__btn:active {
+  transform: translateY(0.12em);
+  box-shadow: 0 0.04em 0 #6b3d00, 0 0.04em 0 0.05em #01061f, 0 0.1em 0.2em rgba(0, 0, 0, 0.5);
+}
+[data-theme='retro'] .sound-gate__hint {
+  color: var(--muted);
+}
+
+/* Confettis façon années 90 : triangles, pastilles et zigzags */
+[data-theme='retro'] .confetti--tri {
+  width: 16px;
+  height: 14px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+[data-theme='retro'] .confetti--dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+[data-theme='retro'] .confetti--zig {
+  width: 28px;
+  height: 10px;
+  clip-path: polygon(0 40%, 16.6% 0, 33.3% 40%, 50% 0, 66.6% 40%, 83.3% 0, 100% 40%, 100% 100%, 83.3% 60%,
+    66.6% 100%, 50% 60%, 33.3% 100%, 16.6% 60%, 0 100%);
+}
+
+/* ---------------- Divers ---------------- */
+/* Mouvements réduits : pas de secousse, de neige, de rotation ni de clignotement */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='retro'] .rays::before,
+  [data-theme='retro'] .crt::after,
+  [data-theme='retro'] .studio-bg::after,
+  [data-theme='retro'] :is(.logo-sub, .pot__mult, .round-badge__mult, .bz-icon),
+  [data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::after,
+  [data-theme='retro'] .stage .view,
+  [data-theme='retro'] body.shake .stage,
+  .crt.boot .crt__boot,
+  .crt.zap .crt__zap {
+    animation: none;
+  }
+}
+/* Les emojis modernes jurent avec l'époque */
+[data-theme='retro'] .emo {
+  display: none;
+}

@@ -129,11 +129,40 @@ socket.on('video', (msg) => {
 });
 document.getElementById('jingleVideo').addEventListener('ended', fadeOutVideo);
 
+// ---- Thème rétro : effets « télé cathodique » ----
+const isRetro = () => !!(cur && cur.theme === 'retro');
+const crt = document.getElementById('crt');
+const crtTimers = {};
+// 'boot' = allumage du tube, 'zap' = neige au changement de plan (cf. retro.css).
+function crtFx(name, ms) {
+  if (!crt) return;
+  crt.classList.remove(name);
+  void crt.offsetWidth; // relance l'animation si elle est déjà en cours
+  crt.classList.add(name);
+  clearTimeout(crtTimers[name]);
+  crtTimers[name] = setTimeout(() => crt.classList.remove(name), ms);
+}
+
+// Texte + copie dans data-text (le thème rétro s'en sert pour le lettrage en relief).
+function setText3d(el, text) {
+  el.textContent = text;
+  el.dataset.text = text;
+}
+
+// Texte précédé d'un emoji isolé dans un <span class="emo"> (masqué en thème rétro).
+function setEmojiText(el, emoji, text) {
+  const e = document.createElement('span');
+  e.className = 'emo';
+  e.textContent = emoji;
+  el.replaceChildren(e, ' ' + text);
+}
+
 // ---- Activation du son + plein écran ----
 const gate = document.getElementById('soundGate');
 document.getElementById('soundGateBtn').addEventListener('click', () => {
   SoundManager.unlock();
   gate.classList.add('hidden');
+  if (isRetro()) crtFx('boot', 1200);
   if (document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
@@ -143,11 +172,18 @@ document.getElementById('soundGateBtn').addEventListener('click', () => {
 function render(s) {
   cur = s;
   // Thème choisi en régie (sombre / clair / rétro) appliqué à l'écran de jeu.
-  document.documentElement.setAttribute('data-theme', s.theme || 'dark');
+  const theme = s.theme || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  if (theme === 'retro' && prev) {
+    if ((prev.theme || 'dark') !== 'retro') crtFx('boot', 1200);
+    // Changement de plan : un peu de neige. Pas entre la question et son plateau
+    // (même manche, la question glisse à sa place).
+    else if (prev.view !== s.view && !(prev.view === 'question' && s.view === 'board')) crtFx('zap', 450);
+  }
   stage.dataset.view = s.view;
 
   // Titre / logo
-  document.getElementById('logoTitle').textContent = s.title;
+  setText3d(document.getElementById('logoTitle'), s.title);
 
   // Équipes & scores
   s.teams.forEach((t, i) => {
@@ -200,38 +236,49 @@ function bigX() {
   wrap.innerHTML = '<span>✕</span>';
   document.body.appendChild(wrap);
   setTimeout(() => wrap.remove(), 900);
+  // L'image tremble (effet visible en thème rétro seulement, cf. retro.css).
+  document.body.classList.remove('shake');
+  void document.body.offsetWidth;
+  document.body.classList.add('shake');
+  setTimeout(() => document.body.classList.remove('shake'), 500);
 }
 
 function renderQuestion(s) {
   const round = s.rounds[s.currentRoundIndex];
   const badge = document.getElementById('qRoundBadge');
-  const mult = round?.multiplier > 1 ? ` ×${round.multiplier}` : '';
-  badge.textContent = `MANCHE ${s.currentRoundIndex + 1}${mult}`;
+  badge.textContent = `MANCHE ${s.currentRoundIndex + 1}`;
+  if (round?.multiplier > 1) {
+    // Multiplicateur à part : pastille « explosion » en thème rétro.
+    const m = document.createElement('span');
+    m.className = 'round-badge__mult';
+    m.textContent = `×${round.multiplier}`;
+    badge.appendChild(m);
+  }
   document.getElementById('qText').textContent = s.board ? s.board.question : '';
 }
 
-// Texte d'une réponse. En thème rétro : chaque lettre dans sa propre case
-// (effet « split-flap » / panneaux qui tournent). Sinon : texte simple.
+// Texte d'une réponse. En thème rétro : une lettre par <span> pour que
+// l'afficheur à ampoules les allume l'une après l'autre. Sinon : texte simple.
 // On ne reconstruit le DOM que si le contenu (ou le thème) change, pour ne pas
 // relancer l'animation à chaque rafraîchissement.
 function setAnswerText(el, text) {
   if (!el) return;
-  const retro = !!(cur && cur.theme === 'retro');
+  const retro = isRetro();
   const key = (retro ? 'R|' : 'P|') + text;
   if (el.dataset.key === key) return;
   el.dataset.key = key;
   if (!retro) {
-    el.classList.remove('flaps');
+    el.classList.remove('lamps');
     el.textContent = text;
     return;
   }
-  el.classList.add('flaps');
+  el.classList.add('lamps');
   el.textContent = '';
   const chars = [...String(text)];
-  el.style.setProperty('--n', chars.length || 1); // sert à dimensionner les cases pour tenir sur 1 ligne
+  el.style.setProperty('--n', chars.length || 1); // sert à dimensionner le texte pour tenir sur 1 ligne
   chars.forEach((ch, i) => {
     const s = document.createElement('span');
-    s.className = ch === ' ' ? 'flap flap--space' : 'flap';
+    s.className = 'lamp';
     s.style.setProperty('--i', i);
     s.textContent = ch === ' ' ? ' ' : ch;
     el.appendChild(s);
@@ -345,9 +392,8 @@ function renderFinal(fs, s) {
   const reached = publicTotal >= fs.target;
   document.getElementById('fppFill').classList.toggle('done', reached);
   const txt = document.getElementById('fppText');
-  txt.textContent = reached
-    ? `🎉 OBJECTIF ATTEINT — ${publicTotal} / ${fs.target}`
-    : `TOTAL ${publicTotal} / ${fs.target}`;
+  if (reached) setEmojiText(txt, '🎉', `OBJECTIF ATTEINT — ${publicTotal} / ${fs.target}`);
+  else txt.textContent = `TOTAL ${publicTotal} / ${fs.target}`;
   txt.classList.toggle('done', reached);
 
   // Applaudissements une seule fois quand l'objectif est franchi (et en vue finale)
@@ -369,7 +415,7 @@ function updateFinalTimerBig(fs) {
   }
   const rem = t.running ? Math.max(0, Math.round((t.endsAt - Date.now()) / 1000)) : t.remaining;
   el.style.display = '';
-  el.textContent = `⏱ ${String(rem).padStart(2, '0')}`;
+  setEmojiText(el, '⏱', String(rem).padStart(2, '0'));
   el.classList.toggle('low', t.running && rem <= 5);
 }
 
@@ -381,7 +427,7 @@ setInterval(() => {
 function renderWinner(s) {
   if (s.view !== 'winner') return;
   const t = s.teams[s.winnerTeam];
-  document.getElementById('winnerName').textContent = t ? t.name : '—';
+  setText3d(document.getElementById('winnerName'), t ? t.name : '—');
   document.getElementById('winnerScore').textContent = t ? `${t.score} points` : '';
   if (!prev || prev.view !== 'winner') {
     SoundManager.play('win');
@@ -454,7 +500,7 @@ function renderBuzzer(s) {
         `<div class="bz-card"><div class="bz-icon">✋</div>` +
         `<div class="bz-team gold-text"></div>` +
         `<div class="bz-sub">a la main !</div></div>`;
-      ov.querySelector('.bz-team').textContent = t ? t.name : '';
+      setText3d(ov.querySelector('.bz-team'), t ? t.name : '');
     }
   } else if (showArmed) {
     const q = s.board ? s.board.question : '';
@@ -462,7 +508,7 @@ function renderBuzzer(s) {
     ov.className = 'buzz-overlay show armed';
     if (ov.dataset.key !== key) {
       ov.innerHTML =
-        `<div class="bz-armed"><div class="bz-ribbon">🔔 À VOS BUZZERS…</div>` +
+        `<div class="bz-armed"><div class="bz-ribbon"><span class="emo">🔔</span> À VOS BUZZERS…</div>` +
         `<p class="question-text bz-question"></p></div>`;
       ov.querySelector('.bz-question').textContent = q;
     }
@@ -522,10 +568,16 @@ function flyQuestion() {
 }
 
 function confetti() {
-  const colors = ['#ffe169', '#f5c518', '#ffffff', '#ff3b3b', '#38d66b'];
+  const retro = isRetro();
+  // Rétro : couleurs « flashy » et formes géométriques façon années 90.
+  const colors = retro
+    ? ['#ffd400', '#ff2bd6', '#00e5ff', '#7cff3a', '#ffffff', '#ff3b3b']
+    : ['#ffe169', '#f5c518', '#ffffff', '#ff3b3b', '#38d66b'];
+  const shapes = ['', 'confetti--tri', 'confetti--dot', 'confetti--zig'];
   for (let i = 0; i < 120; i++) {
     const c = document.createElement('div');
     c.className = 'confetti';
+    if (retro && shapes[i % shapes.length]) c.classList.add(shapes[i % shapes.length]);
     c.style.left = Math.random() * 100 + 'vw';
     c.style.background = colors[i % colors.length];
     c.style.animationDuration = 2 + Math.random() * 2 + 's';

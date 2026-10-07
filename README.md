@@ -13,7 +13,7 @@ accessibles depuis n'importe quel appareil du réseau local.
 - ❌ **Gestion des fautes** (les 3 X) avec animation plein écran.
 - 🎵 **Sons** : 11 sons (générique, musique de manche, buzzer, bonne/mauvaise réponse, points, signal des 5 secondes, temps écoulé, musique de finale, applaudissements, victoire). Dépose tes propres fichiers (mp3, wav, ogg, m4a…) dans `sounds/` : détectés à chaud, état visible dans la régie, repli automatique sur des sons de synthèse.
 - 🎬 **Jingle vidéo** : diffuse une vidéo en plein écran sur l'écran de jeu depuis la régie (fichiers déposés dans `media/` ou URL) — préchargée par l'écran de jeu dès son ouverture (démarrage instantané), arrêt en fondu.
-- 🖥️ **Thèmes de l'écran de jeu** : **sombre**, **clair** ou **rétro 90s** (kitsch) — choisis en régie.
+- 🖥️ **Thèmes de l'écran de jeu** : **sombre**, **clair** ou **rétro 90s** (télé cathodique, plateau à rayons, cadres d'ampoules en chenillard, afficheurs à ampoules, lettrage or en relief) — choisis en régie.
 - 🎉 Écran de victoire avec confettis.
 - 📖 **Règles intégrées** : page `/regles` (avec déroulé détaillé de la manche finale) accessible depuis la régie.
 - 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main). **QR code** de connexion intégré.
