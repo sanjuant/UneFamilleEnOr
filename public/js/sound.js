@@ -20,11 +20,16 @@ const SoundManager = (() => {
     { key: 'applause', file: 'applause', emoji: '👏', label: 'Applaudis­sements', hint: 'Auto avec les points' },
     { key: 'win', file: 'win', emoji: '🏆', label: 'Victoire', hint: 'Auto sur l’écran du gagnant', music: true, cls: 'btn--gold' },
     { key: 'introloop', file: 'intro-boucle', emoji: '🌟', label: "Musique de l'intro", hint: 'Auto pendant l’intro animée · en boucle', music: true, loop: true },
-    { key: 'explosion', file: 'explosion', emoji: '💥', label: 'Explosion', hint: 'Auto quand le M de l’intro explose' },
+    { key: 'explosion', file: 'explosion', emoji: '💥', label: 'Explosion', hint: 'Auto quand le M de l’intro explose', swell: true },
   ];
+  // `swell` : la musique en cours monte à 100 % le temps du son, puis revient à son volume.
   const BY_KEY = Object.fromEntries(CATALOG.map((s) => [s.key, s]));
 
   let files = {};        // clé -> { file, url } du fichier perso trouvé
+  let heads = {};        // clé (son en boucle) -> { file, url } du début « <nom>-debut » joué une fois
+  const headLoops = {};  // clé -> { id, promise } : tampon début + boucle décodé (Web Audio)
+  const tokens = {};     // clé -> compteur incrémenté à chaque stop (annule un play en attente)
+  const gains = {};      // clé -> GainNode de sortie d'un son Web Audio en cours (pour l'effacer)
   let scanned = false;
   let scanning = null;   // promesse du scan en cours
   const listeners = [];
@@ -71,10 +76,15 @@ const SoundManager = (() => {
           if (!byBase[base]) byBase[base] = f;
         });
         files = {};
+        heads = {};
         CATALOG.forEach((s) => {
           const f = byBase[s.file.toLowerCase()];
           if (f) files[s.key] = f;
+          const h = s.loop && f && byBase[`${s.file}-debut`.toLowerCase()];
+          if (h) heads[s.key] = h;
         });
+        // Début + boucle : décodés d'avance pour partir sans délai.
+        Object.keys(heads).forEach((key) => headLoopBuffer(key).catch(() => {}));
         // Précharge (latence minimale au déclenchement) ; oublie les fichiers retirés/remplacés.
         CATALOG.forEach(({ key }) => {
           const f = files[key];
@@ -120,6 +130,70 @@ const SoundManager = (() => {
   function fileFor(key) {
     return files[key] || null;
   }
+  /** Début joué une fois avant la boucle ({ file, url }) ou null. */
+  function headFor(key) {
+    return heads[key] || null;
+  }
+
+  /**
+   * Début + boucle dans un seul tampon : la source Web Audio boucle sur la 2e partie
+   * (loopStart), à l'échantillon près, ce qu'un élément <audio> ne sait pas faire.
+   */
+  function headLoopBuffer(key) {
+    const h = heads[key];
+    const f = files[key];
+    const id = `${h.url}|${f.url}`;
+    if (!headLoops[key] || headLoops[key].id !== id) {
+      headLoops[key] = { id, promise: buildHeadLoop(h.url, f.url) };
+    }
+    return headLoops[key].promise;
+  }
+  async function buildHeadLoop(headUrl, loopUrl) {
+    // Contexte hors ligne : décode sans attendre le déblocage de l'audio par un geste.
+    const dec = new OfflineAudioContext(2, 1, 44100);
+    const load = (url) =>
+      fetch(url)
+        .then((r) => {
+          if (!r.ok) throw new Error(`${url} : ${r.status}`);
+          return r.arrayBuffer();
+        })
+        .then((ab) => dec.decodeAudioData(ab));
+    const [a, b] = await Promise.all([load(headUrl), load(loopUrl)]);
+    const ch = Math.max(a.numberOfChannels, b.numberOfChannels);
+    const buffer = new AudioBuffer({ length: a.length + b.length, numberOfChannels: ch, sampleRate: a.sampleRate });
+    for (let i = 0; i < ch; i++) {
+      buffer.copyToChannel(a.getChannelData(Math.min(i, a.numberOfChannels - 1)), i, 0);
+      buffer.copyToChannel(b.getChannelData(Math.min(i, b.numberOfChannels - 1)), i, a.length);
+    }
+    return { buffer, loopStart: a.length / a.sampleRate };
+  }
+
+  /** Joue début + boucle ; false si le décodage a échoué (repli sur la boucle seule). */
+  async function playHeadLoop(name, opts) {
+    const token = tokens[name];
+    const hl = await headLoopBuffer(name).catch(() => null);
+    if (tokens[name] !== token || muted) return true; // arrêté (ou relancé) pendant le décodage
+    if (!hl) return false;
+    const c = audioCtx();
+    const out = c.createGain();
+    out.gain.value = opts.volume ?? baseVol(name);
+    out.connect(c.destination);
+    gains[name] = out;
+    const src = c.createBufferSource();
+    src.buffer = hl.buffer;
+    src.loop = true;
+    src.loopStart = hl.loopStart;
+    src.loopEnd = hl.buffer.duration;
+    src.connect(out);
+    src.start();
+    synthStops[name] = () => {
+      try {
+        src.stop();
+      } catch {}
+      out.disconnect();
+    };
+    return true;
+  }
   function onChange(fn) {
     listeners.push(fn);
   }
@@ -130,12 +204,14 @@ const SoundManager = (() => {
     if (muted) return;
     const def = BY_KEY[name];
     if (def && def.music) CATALOG.forEach((s) => s.music && s.key !== name && stop(s.key));
+    if (def && def.swell) swellMusic();
     stop(name); // évite les superpositions du même son
     const loop = opts.loop ?? !!(def && def.loop);
+    if (loop && heads[name] && (await playHeadLoop(name, opts))) return;
     const el = elements[name];
     if (el) {
       el.loop = loop;
-      el.volume = opts.volume ?? 1;
+      el.volume = opts.volume ?? baseVol(name);
       try {
         el.currentTime = 0;
       } catch {}
@@ -152,6 +228,9 @@ const SoundManager = (() => {
   }
 
   function stop(name) {
+    tokens[name] = (tokens[name] || 0) + 1;
+    delete gains[name];
+    delete swells[name];
     const el = playing[name];
     if (el) {
       el.pause();
@@ -166,9 +245,58 @@ const SoundManager = (() => {
     }
   }
 
+  // ---- Volumes : volume de base par son (curseur de la régie) + montée « swell » ----
+  const volumes = {}; // clé -> volume de base 0–1 (défaut 1)
+  const swells = {};  // clé -> instant (performance.now) du début de la montée
+  const SWELL_HOLD = 1.5; // s à 100 % (l'explosion dure ~1,3 s)
+  const SWELL_BACK = 2.5; // s de redescente vers le volume de base
+  let swellTimer = null;
+  const baseVol = (key) => volumes[key] ?? 1;
+
+  /** Volume courant d'un son : celui du curseur, ou la montée en cours. */
+  function levelOf(key) {
+    const base = baseVol(key);
+    if (swells[key] === undefined) return base;
+    const t = (performance.now() - swells[key]) / 1000;
+    if (t < SWELL_HOLD) return 1;
+    if (t < SWELL_HOLD + SWELL_BACK) return 1 + (base - 1) * ((t - SWELL_HOLD) / SWELL_BACK);
+    delete swells[key];
+    return base;
+  }
+  function applyVolume(key) {
+    const v = levelOf(key);
+    const g = gains[key];
+    if (g) g.gain.setTargetAtTime(v, g.context.currentTime, 0.015);
+    const el = playing[key];
+    if (el) el.volume = v;
+  }
+
+  /** Volume de base d'un son (0–1), appliqué en direct s'il joue. */
+  function setVolume(key, v) {
+    volumes[key] = Math.min(1, Math.max(0, Number(v) || 0));
+    applyVolume(key);
+  }
+
+  /**
+   * Son « swell » (l'explosion) : les musiques en cours passent à 100 % le temps
+   * du son, puis redescendent en fondu à leur volume de base.
+   */
+  function swellMusic() {
+    const now = performance.now();
+    CATALOG.forEach(({ key, music }) => {
+      if (music && (gains[key] || playing[key])) swells[key] = now;
+    });
+    Object.keys(swells).forEach(applyVolume);
+    clearInterval(swellTimer);
+    swellTimer = setInterval(() => {
+      Object.keys(swells).forEach(applyVolume);
+      if (!Object.keys(swells).length) clearInterval(swellTimer);
+    }, 30);
+  }
+
   function stopAll() {
-    Object.keys(playing).forEach(stop);
-    Object.keys(synthStops).forEach(stop);
+    // Tout le catalogue : annule aussi un début + boucle encore en cours de décodage.
+    CATALOG.forEach(({ key }) => stop(key));
   }
 
   /** Événement 'sound' reçu du serveur : { name, stop }. name '*' = tout couper. */
@@ -182,13 +310,15 @@ const SoundManager = (() => {
   // ------------------------------------------------------------------ //
   //  Synthèse (repli sans fichiers) — habillage « plateau télé 90s »
   // ------------------------------------------------------------------ //
-  const synthStops = {};
+  const synthStops = {}; // clé -> arrêt d'un son Web Audio (synthèse, ou début + boucle)
 
   /** Bus de sortie d'un son : le couper silencie tout ce qui y est programmé. */
   function bus(name) {
     const c = audioCtx();
     const out = c.createGain();
+    out.gain.value = baseVol(name);
     out.connect(c.destination);
+    gains[name] = out; // volume réglable en direct (setVolume, swellMusic)
     const b = { c, out, t0: c.currentTime + 0.02, timers: [] };
     const stopFn = () => {
       b.timers.forEach(clearTimeout);
@@ -545,5 +675,5 @@ const SoundManager = (() => {
 
   scan();
 
-  return { catalog: CATALOG, play, stop, stopAll, handle, unlock, setMuted, isMuted, isUnlocked, scan, fileFor, onChange };
+  return { catalog: CATALOG, play, stop, stopAll, handle, unlock, setMuted, isMuted, isUnlocked, scan, fileFor, headFor, onChange, setVolume };
 })();

@@ -150,19 +150,16 @@ function playIntro() {
   clearTimeout(introStopTimer);
   api.restart({ crt: !isRetro() }); // le thème rétro a déjà son propre tube cathodique
   introOverlay.classList.add('show');
-  SoundManager.play('introloop'); // boucle jusqu'au Stop
 }
 // L'intro tourne en boucle ; c'est la régie qui fait exploser le M.
+// Les sons (musique, explosion) arrivent par l'événement 'sound' du serveur.
 function boomIntro() {
   const api = introApi();
   if (!api || !introOverlay.classList.contains('show')) return;
   api.boom();
-  SoundManager.play('explosion');
 }
 function stopIntro() {
   if (!introOverlay.classList.contains('show')) return;
-  SoundManager.stop('introloop');
-  SoundManager.stop('explosion');
   introOverlay.classList.remove('show');
   clearTimeout(introStopTimer);
   introStopTimer = setTimeout(() => introApi()?.stop(), 800); // après le fondu
@@ -216,6 +213,7 @@ document.getElementById('soundGateBtn').addEventListener('click', () => {
 // ---- Rendu ----
 function render(s) {
   cur = s;
+  SoundManager.setVolume('introloop', (s.introVolume ?? 40) / 100); // curseur de la régie
   // Thème choisi en régie (sombre / clair / rétro) appliqué à l'écran de jeu.
   const theme = s.theme || 'dark';
   document.documentElement.setAttribute('data-theme', theme);

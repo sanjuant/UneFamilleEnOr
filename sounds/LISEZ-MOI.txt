@@ -27,6 +27,10 @@ votre fichier (PERSO) ou le son de synthèse de remplacement (SYNTHÉ).
 
 Exemple : buzzer.mp3, round.wav, 5sec.mp3, final.ogg…
 
+Début joué une seule fois avant une boucle (final, intro-boucle) : ajoutez
+un fichier « <nom>-debut », par ex. intro-boucle-debut.mp3. Il est joué
+une fois, puis intro-boucle.mp3 tourne en boucle, sans coupure entre les deux.
+
 Conseils
 - Coupez les blancs en début de fichier : le son part au moment du clic.
 - 5sec : un son court (moins de 5 s) pour ne pas chevaucher « timesup ».

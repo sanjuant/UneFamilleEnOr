@@ -129,7 +129,12 @@
         <button class="btn btn--x" id="introBoom">💥 Faire exploser le M</button>
         <button class="btn" id="introStop">⏹ Stop</button>
       </div>
-      <p class="rounds-hint">Le logo brille en boucle avec sa musique (son « 🌟 Musique de l'intro ») jusqu'à ce que tu fasses exploser le M (son « 💥 Explosion »). Il reste ensuite affiché jusqu'au Stop ; « Lancer l'intro » repart avec le logo intact. Aperçu : <a href="/intro.html" target="_blank" rel="noopener">/intro.html</a> (touche B).</p>
+      <label class="intro-vol" title="L'explosion remonte la musique à 100 %, puis elle revient à ce volume">
+        <span class="intro-vol__label">🔉 Volume de la musique de l'intro</span>
+        <input type="range" id="introVolume" min="0" max="100" step="5" value="40" />
+        <span class="intro-vol__val" id="introVolumeVal">40 %</span>
+      </label>
+      <p class="rounds-hint">Le logo brille en boucle avec sa musique (son « 🌟 Musique de l'intro ») jusqu'à ce que tu fasses exploser le M (son « 💥 Explosion »). Le curseur règle le volume de la musique (assez bas pour que l'animateur parle par-dessus) ; à l'explosion, elle remonte à 100 % puis redescend. Il reste ensuite affiché jusqu'au Stop ; « Lancer l'intro » repart avec le logo intact. Aperçu : <a href="/intro.html" target="_blank" rel="noopener">/intro.html</a> (touche B).</p>
     </section>
 
     <!-- Buzzers (face-à-face) -->

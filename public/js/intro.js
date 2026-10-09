@@ -8,7 +8,7 @@
  *    ?loop=20   relance automatique après N secondes
  *    ?mute      pas de son
  *    ?embed     intégrée à l'écran de jeu : attend restart() / boom() ; les sons
- *               (musique, explosion) sont alors joués par l'écran de jeu
+ *               (musique, explosion) sont alors diffusés par le serveur (régie + écran de jeu)
  *    ?end=20    instant de fin → appelle intro.onEnd
  *  Clavier : Espace / clic = rejouer, B = explosion (hors embed).
  * ------------------------------------------------------------------ */

@@ -74,6 +74,9 @@ const ROUND_PHASES = ['faceoff', 'play', 'steal', 'done'];
 let displayTheme = THEMES.includes((process.env.THEME || '').toLowerCase())
   ? process.env.THEME.toLowerCase()
   : 'dark';
+// Volume de la musique de l'intro (0–100), réglé en régie : bas pour que l'animateur
+// puisse parler par-dessus. Réglage de la soirée, gardé d'un jeu à l'autre.
+let introVolume = 40;
 
 // Code d'accès des surfaces de CONTRÔLE (régie + animateur).
 // Défini par REGIE_CODE, sinon généré (6 chiffres aléatoires sûrs).
@@ -760,6 +763,12 @@ const handlers = {
     if (state.board) state.board.activeTeamIndex = null;
   },
 
+  // Volume de la musique de l'intro (curseur de la régie).
+  setIntroVolume(p) {
+    const v = Math.round(Number(p && p.volume));
+    if (Number.isFinite(v)) introVolume = Math.min(100, Math.max(0, v));
+  },
+
   // Afficher / masquer le QR code de connexion des buzzers sur l'écran de jeu.
   toggleJoinQR(p) {
     state.showJoinQR = p && p.show !== undefined ? !!p.show : !state.showJoinQR;
@@ -850,6 +859,15 @@ function emitSound(name, stop) {
   io.emit('sound', { name, stop: !!stop });
 }
 
+/** Intro animée à l'écran ? (l'explosion n'a de sens que pendant l'intro) */
+let introShowing = false;
+function stopIntroSounds() {
+  if (!introShowing) return;
+  introShowing = false;
+  emitSound('introloop', true);
+  emitSound('explosion', true);
+}
+
 // Fichiers ajoutés/retirés dans sounds/ : tous les écrans re-scannent la liste.
 let soundsChangedTimer = null;
 function notifySoundsChanged() {
@@ -897,12 +915,14 @@ function publicState() {
 function sendStateTo(socket) {
   state.animatorControl = animatorControl;
   state.theme = displayTheme;
+  state.introVolume = introVolume;
   socket.emit('state', socket.data.authed ? state : publicState());
 }
 
 function broadcastState() {
   state.animatorControl = animatorControl;
   state.theme = displayTheme;
+  state.introVolume = introVolume;
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();
@@ -1014,15 +1034,31 @@ io.on('connection', (socket) => {
     if (msg.stop) return io.emit('video', { stop: true });
     const src = (msg.src || '').toString().slice(0, 500);
     // N'accepte qu'un fichier local /media ou une URL http(s) (anti-abus léger).
-    if (/^\/media\//.test(src) || /^https?:\/\//i.test(src)) io.emit('video', { src });
+    if (/^\/media\//.test(src) || /^https?:\/\//i.test(src)) {
+      stopIntroSounds(); // la vidéo remplace l'intro sur l'écran de jeu
+      io.emit('video', { src });
+    }
   });
 
   // Intro animée « Une Faille en Or » (page /intro.html) jouée sur l'écran de jeu.
+  // Ses sons passent par emitSound, comme les autres : ils sortent donc aussi de la régie.
   socket.on('intro', (msg) => {
     msg = msg || {};
     if (!socket.data.authed) return;
     if (socket.data.role !== 'regie' && !animatorControl) return;
-    io.emit('intro', msg.stop ? { stop: true } : msg.boom ? { boom: true } : { play: true });
+    if (msg.stop) {
+      stopIntroSounds();
+      io.emit('intro', { stop: true });
+    } else if (msg.boom) {
+      if (!introShowing) return; // pas d'explosion sans intro à l'écran
+      emitSound('explosion');
+      io.emit('intro', { boom: true });
+    } else {
+      introShowing = true;
+      emitSound('explosion', true);
+      emitSound('introloop'); // boucle jusqu'au Stop
+      io.emit('intro', { play: true });
+    }
   });
 
   // Fichiers de questions du serveur : liste + chargement (mêmes droits qu'une commande).

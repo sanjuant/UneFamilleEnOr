@@ -250,9 +250,10 @@ document.getElementById('winB').addEventListener('click', () => cmd('setWinner',
     SoundManager.catalog.forEach((s) => {
       const b = grid.querySelector(`[data-sound="${s.key}"]`);
       const f = SoundManager.fileFor(s.key);
+      const h = SoundManager.headFor(s.key);
       if (f) custom++;
       b.classList.toggle('is-custom', !!f);
-      b.querySelector('[data-snd-file]').textContent = f ? f.file : `${s.file}.mp3`;
+      b.querySelector('[data-snd-file]').textContent = f ? (h ? `${h.file} → ${f.file}` : f.file) : `${s.file}.mp3`;
       b.querySelector('[data-snd-badge]').textContent = f ? 'perso' : 'synthé';
     });
     document.getElementById('soundCount').textContent =
@@ -351,7 +352,24 @@ document.getElementById('animModeCtrl').addEventListener('click', () => cmd('set
   document.getElementById('introStop').addEventListener('click', () => {
     if (authed) socket.emit('intro', { stop: true });
   });
+  // Volume de la musique de l'intro : appliqué partout via l'état (renderIntroVolume).
+  document.getElementById('introVolume').addEventListener('input', (e) => {
+    const volume = Number(e.target.value);
+    document.getElementById('introVolumeVal').textContent = `${volume} %`;
+    SoundManager.setVolume('introloop', volume / 100); // réponse immédiate sous le doigt
+    cmd('setIntroVolume', { volume });
+  });
 })();
+
+function renderIntroVolume() {
+  const v = state.introVolume ?? 40;
+  const slider = document.getElementById('introVolume');
+  // Curseur en main : sa valeur (déjà appliquée) prime sur un écho du serveur en retard.
+  if (document.activeElement === slider) return;
+  SoundManager.setVolume('introloop', v / 100);
+  slider.value = v;
+  document.getElementById('introVolumeVal').textContent = `${v} %`;
+}
 
 // Thème de l'écran de jeu (sombre / clair / rétro)
 document.querySelectorAll('[data-theme-btn]').forEach((b) =>
@@ -446,6 +464,7 @@ function render() {
   );
 
   renderStatusbar();
+  renderIntroVolume();
   renderSpeaker();
   renderAnimMode();
   renderThemePicker();
