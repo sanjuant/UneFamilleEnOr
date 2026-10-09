@@ -11,8 +11,9 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 🔄 **Synchro temps réel** (WebSocket) : la régie pilote, tous les écrans suivent instantanément.
 - 🏆 **Comptage des points** automatique (cagnotte × multiplicateur) + ajustement manuel.
 - ❌ **Gestion des fautes** (les 3 X) avec animation plein écran.
-- 🎵 **Sons** : 11 sons (générique, musique de manche, buzzer, bonne/mauvaise réponse, points, signal des 5 secondes, temps écoulé, musique de finale, applaudissements, victoire). Dépose tes propres fichiers (mp3, wav, ogg, m4a…) dans `sounds/` : détectés à chaud, état visible dans la régie, repli automatique sur des sons de synthèse.
+- 🎵 **Sons** : 13 sons (générique, musique de manche, buzzer, bonne/mauvaise réponse, points, signal des 5 secondes, temps écoulé, musique de finale, applaudissements, victoire, musique de l'intro, explosion). Dépose tes propres fichiers (mp3, wav, ogg, m4a…) dans `sounds/` : détectés à chaud, état visible dans la régie, repli automatique sur des sons de synthèse.
 - 🎬 **Jingle vidéo** : diffuse une vidéo en plein écran sur l'écran de jeu depuis la régie (fichiers déposés dans `media/` ou URL) — préchargée par l'écran de jeu dès son ouverture (démarrage instantané), arrêt en fondu.
+- 💥 **Intro « Une Faille en Or »** (carte Jingle vidéo de la régie) : le logo doré brille en boucle sur le plateau rétro avec sa musique (son `intro-boucle`), jusqu'à ce que la régie fasse exploser le M (son `explosion`) ; aperçu sur `/intro.html` (touche B).
 - 🖥️ **Thèmes de l'écran de jeu** : **sombre**, **clair** ou **rétro 90s** (télé cathodique, plateau à rayons, cadres d'ampoules en chenillard, afficheurs à ampoules, lettrage or en relief) — choisis en régie.
 - 🎤 **La parole à l'intervenant** : après chaque manche classique, un écran « La parole à Thomas » (avec la question de la manche) s'intercale pour qu'un intervenant rebondisse sur le sujet.
 - 🎉 Écran de victoire avec confettis.

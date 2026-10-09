@@ -1,26 +1,28 @@
 /* ------------------------------------------------------------------ *
  *  Intro « Une Faille en Or »
- *  Logo doré qui brille (reflets + scintillements), puis le M de
- *  FAMILLE explose → « UNE FA ILLE EN OR ».
+ *  Logo doré qui brille en boucle (reflets + scintillements) jusqu'à ce
+ *  qu'on déclenche l'explosion du M de FAMILLE → « UNE FA ILLE EN OR ».
  *
  *  Paramètres d'URL :
- *    ?boom=10   instant de l'explosion (s)
+ *    ?boom=10   explosion automatique à N s (par défaut : jamais, on attend B / boom())
  *    ?loop=20   relance automatique après N secondes
  *    ?mute      pas de son
- *    ?embed     intégrée à l'écran de jeu : attend restart(), signale la fin via onEnd
- *    ?end=20    instant de fin (défaut 20 s en mode embed) → appelle intro.onEnd
- *  Clavier : Espace / clic = rejouer, B = explosion immédiate (hors embed).
+ *    ?embed     intégrée à l'écran de jeu : attend restart() / boom() ; les sons
+ *               (musique, explosion) sont alors joués par l'écran de jeu
+ *    ?end=20    instant de fin → appelle intro.onEnd
+ *  Clavier : Espace / clic = rejouer, B = explosion (hors embed).
  * ------------------------------------------------------------------ */
 (() => {
   'use strict';
 
   const params = new URLSearchParams(location.search);
   const num = (v, d) => (v !== null && v !== '' && isFinite(+v) ? +v : d);
-  const BOOM_AT = num(params.get('boom'), 10);
+  const BOOM_AT = num(params.get('boom'), Infinity);
   const LOOP = num(params.get('loop'), 0);
   const EMBED = params.has('embed');
-  const END = num(params.get('end'), EMBED ? 20 : 0);
-  let muted = params.has('mute');
+  const END = num(params.get('end'), 0);
+  let muted = params.has('mute') || EMBED;
+  let boomAt = BOOM_AT;
 
   const NS = 'http://www.w3.org/2000/svg';
   const $ = (id) => document.getElementById(id);
@@ -571,14 +573,14 @@
       nextGlint = t + R(0.18, 0.6);
     }
     // Un éclat insistant sur le M juste avant qu'il saute
-    if (!mGlintDone && t > BOOM_AT - 0.9) {
+    if (!mGlintDone && t > boomAt - 0.9) {
       mGlintDone = true;
       const b = mBox();
       spawnGlint(t, (b.x0 + b.x1) / 2, -110, 130, 0.85);
     }
     updateGlints(t);
 
-    if (!boomed && t >= BOOM_AT) {
+    if (!boomed && t >= boomAt) {
       boomed = true;
       boom(t);
     }
@@ -608,6 +610,7 @@
     if ('crt' in opts) document.body.classList.toggle('no-crt', !opts.crt);
     ended = false;
     paused = false;
+    boomAt = BOOM_AT;
     t0 = last = performance.now();
     boomed = false;
     mGlintDone = false;
@@ -626,7 +629,7 @@
 
   function boomNow() {
     if (boomed) return;
-    t0 = performance.now() - BOOM_AT * 1000;
+    boomAt = lastT; // à la prochaine image
     mGlintDone = true;
   }
 

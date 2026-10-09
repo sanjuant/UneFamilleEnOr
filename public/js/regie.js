@@ -345,6 +345,9 @@ document.getElementById('animModeCtrl').addEventListener('click', () => cmd('set
   document.getElementById('introPlay').addEventListener('click', () => {
     if (authed) socket.emit('intro', { play: true });
   });
+  document.getElementById('introBoom').addEventListener('click', () => {
+    if (authed) socket.emit('intro', { boom: true });
+  });
   document.getElementById('introStop').addEventListener('click', () => {
     if (authed) socket.emit('intro', { stop: true });
   });

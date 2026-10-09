@@ -22,6 +22,8 @@ votre fichier (PERSO) ou le son de synthèse de remplacement (SYNTHÉ).
   final            💰 Musique de finale              auto pendant le chrono de la finale (en boucle)
   applause         👏 Applaudissements               avec les points, et objectif de la finale atteint
   win              🏆 Jingle de victoire             à l'affichage de l'écran du gagnant
+  intro-boucle     🌟 Musique de l'intro animée      pendant l'intro « Une Faille en Or » (en boucle)
+  explosion        💥 Explosion                      quand la régie fait exploser le M de l'intro
 
 Exemple : buzzer.mp3, round.wav, 5sec.mp3, final.ogg…
 

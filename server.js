@@ -1022,7 +1022,7 @@ io.on('connection', (socket) => {
     msg = msg || {};
     if (!socket.data.authed) return;
     if (socket.data.role !== 'regie' && !animatorControl) return;
-    io.emit('intro', msg.stop ? { stop: true } : { play: true });
+    io.emit('intro', msg.stop ? { stop: true } : msg.boom ? { boom: true } : { play: true });
   });
 
   // Fichiers de questions du serveur : liste + chargement (mêmes droits qu'une commande).

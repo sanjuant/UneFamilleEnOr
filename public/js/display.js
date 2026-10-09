@@ -148,15 +148,21 @@ function playIntro() {
   if (!api) return;
   hideVideo();
   clearTimeout(introStopTimer);
-  api.onEnd = stopIntro; // fin de l'animation → fondu de sortie
-  api.restart({
-    mute: SoundManager.isMuted() || !SoundManager.isUnlocked(),
-    crt: !isRetro(), // le thème rétro a déjà son propre tube cathodique
-  });
+  api.restart({ crt: !isRetro() }); // le thème rétro a déjà son propre tube cathodique
   introOverlay.classList.add('show');
+  SoundManager.play('introloop'); // boucle jusqu'au Stop
+}
+// L'intro tourne en boucle ; c'est la régie qui fait exploser le M.
+function boomIntro() {
+  const api = introApi();
+  if (!api || !introOverlay.classList.contains('show')) return;
+  api.boom();
+  SoundManager.play('explosion');
 }
 function stopIntro() {
   if (!introOverlay.classList.contains('show')) return;
+  SoundManager.stop('introloop');
+  SoundManager.stop('explosion');
   introOverlay.classList.remove('show');
   clearTimeout(introStopTimer);
   introStopTimer = setTimeout(() => introApi()?.stop(), 800); // après le fondu
@@ -164,6 +170,7 @@ function stopIntro() {
 socket.on('intro', (msg) => {
   if (!msg) return;
   if (msg.stop) stopIntro();
+  else if (msg.boom) boomIntro();
   else if (msg.play) playIntro();
 });
 

@@ -19,6 +19,8 @@ const SoundManager = (() => {
     { key: 'final', file: 'final', emoji: '💰', label: 'Musique de finale', hint: 'Auto pendant le chrono final · en boucle', music: true, loop: true },
     { key: 'applause', file: 'applause', emoji: '👏', label: 'Applaudis­sements', hint: 'Auto avec les points' },
     { key: 'win', file: 'win', emoji: '🏆', label: 'Victoire', hint: 'Auto sur l’écran du gagnant', music: true, cls: 'btn--gold' },
+    { key: 'introloop', file: 'intro-boucle', emoji: '🌟', label: "Musique de l'intro", hint: 'Auto pendant l’intro animée · en boucle', music: true, loop: true },
+    { key: 'explosion', file: 'explosion', emoji: '💥', label: 'Explosion', hint: 'Auto quand le M de l’intro explose' },
   ];
   const BY_KEY = Object.fromEntries(CATALOG.map((s) => [s.key, s]));
 
@@ -463,6 +465,77 @@ const SoundManager = (() => {
           b.timers.push(setTimeout(loop, Math.max(0, 1000 * (b.t0 + n * 2 - 0.5 - b.c.currentTime))));
         };
         loop();
+        break;
+      }
+      case 'introloop': { // groove « plateau télé » pailleté : C – Am – F – G, 120 bpm
+        const prog = [
+          [N.C4, [N.C5, N.E5, N.G5], [N.C6, N.E6, N.G6, N.E6]],
+          [N.A3, [N.C5, N.E5, N.A5], [N.A5 * 2, N.E6, N.C6, N.E6]],
+          [N.F4 / 2, [N.C5, N.F5, N.A5], [N.F5 * 2, N.A6, N.C7, N.A6]],
+          [N.G3, [N.D5, N.G5, N.B5], [N.G6, N.D6, N.B5 * 2, N.D6]],
+        ];
+        const bar = (t, i) => {
+          const [root, ch, arp] = prog[i % 4];
+          // basse en croches (octave / fondamentale)
+          for (let k = 0; k < 8; k++) brass(b, (k % 2 ? root * 2 : root) / 2, t + k * 0.25, 0.18, 0.08);
+          // accords « stabs » sur les contretemps
+          [0.25, 0.75, 1.25, 1.75].forEach((o) => chord(b, ch, t + o, 0.14, 0.045));
+          // paillettes : arpège de cloches
+          arp.forEach((f, k) => bell(b, f, t + k * 0.5 + 0.125, 0.6, 0.035));
+          // batterie
+          kick(b, t, 0.4);
+          kick(b, t + 1, 0.4);
+          snare(b, t + 0.5, 0.11);
+          snare(b, t + 1.5, 0.11);
+          for (let k = 0; k < 8; k++) noise(b, t + k * 0.25, 0.04, { type: 'highpass', freq: 8000, gain: k % 2 ? 0.05 : 0.025 });
+          if (i % 4 === 3) cymbal(b, t + 1.75, 0.9, 0.06);
+        };
+        if (!opts.loop) {
+          for (let i = 0; i < 4; i++) bar(i * 2, i);
+          b.done(8.2);
+          break;
+        }
+        let n = 0;
+        const loop = () => {
+          bar(n * 2, n);
+          n++;
+          b.timers.push(setTimeout(loop, Math.max(0, 1000 * (b.t0 + n * 2 - 0.5 - b.c.currentTime))));
+        };
+        loop();
+        break;
+      }
+      case 'explosion': { // souffle filtré qui s'assombrit + grave « boum » + crépitements
+        const { c } = b;
+        const t = b.t0;
+        const src = c.createBufferSource();
+        src.buffer = noiseBuffer(c);
+        src.loop = true;
+        const lp = c.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(7000, t);
+        lp.frequency.exponentialRampToValueAtTime(220, t + 2.4);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.9, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.25, t + 0.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 3);
+        src.connect(lp).connect(g).connect(b.out);
+        src.start(t);
+        src.stop(t + 3.05);
+        const o = c.createOscillator();
+        o.frequency.setValueAtTime(110, t);
+        o.frequency.exponentialRampToValueAtTime(32, t + 0.7);
+        const og = c.createGain();
+        og.gain.setValueAtTime(0.0001, t);
+        og.gain.exponentialRampToValueAtTime(1, t + 0.01);
+        og.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+        o.connect(og).connect(b.out);
+        o.start(t);
+        o.stop(t + 1.5);
+        for (let i = 0; i < 26; i++) {
+          noise(b, 0.05 + Math.random() * 1.6, 0.03, { freq: 1500 + Math.random() * 3000, q: 2, gain: 0.05 + Math.random() * 0.12 });
+        }
+        b.done(3.2);
         break;
       }
       default:
