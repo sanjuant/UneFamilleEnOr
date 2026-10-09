@@ -295,6 +295,16 @@ body.regie {
   margin-bottom: 14px;
   line-height: 1.2;
 }
+/* Question pas encore affichée à l'écran de jeu (l'animateur la lit) */
+.board-q--hidden {
+  opacity: 0.6;
+}
+.board-q--hidden::after {
+  content: ' · pas encore à l’écran';
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--gold-1);
+}
 .answers-ctrl {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

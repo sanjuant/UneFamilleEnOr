@@ -255,7 +255,12 @@ function renderQuestion(s) {
     m.textContent = `×${round.multiplier}`;
     badge.appendChild(m);
   }
-  document.getElementById('qText').textContent = s.board ? s.board.question : '';
+  document.getElementById('qText').textContent = shownQuestion(s.board);
+}
+
+// Question de la manche, ou '' tant que l'animateur ne l'a pas fait afficher.
+function shownQuestion(board) {
+  return board && board.questionShown !== false ? board.question : '';
 }
 
 // Texte d'une réponse. En thème rétro : une lettre par <span> pour que
@@ -328,7 +333,7 @@ document.fonts.ready.then(fitLamps);
 
 function renderBoard(board) {
   const el = document.getElementById('board');
-  document.getElementById('boardQuestion').textContent = board ? board.question : '';
+  document.getElementById('boardQuestion').textContent = shownQuestion(board);
   if (!board) {
     el.innerHTML = '';
     return;
@@ -544,14 +549,24 @@ function renderBuzzer(s) {
       setText3d(ov.querySelector('.bz-team'), t ? t.name : '');
     }
   } else if (showArmed) {
-    const q = s.board ? s.board.question : '';
-    key = 'A|' + q;
+    key = 'A';
     ov.className = 'buzz-overlay show armed';
     if (ov.dataset.key !== key) {
       ov.innerHTML =
         `<div class="bz-armed"><div class="bz-ribbon"><span class="emo">🔔</span> À VOS BUZZERS…</div>` +
         `<p class="question-text bz-question"></p></div>`;
-      ov.querySelector('.bz-question').textContent = q;
+    }
+    // La question arrive sous le bandeau quand l'animateur l'a lue (sans
+    // reconstruire le bandeau, pour ne pas relancer son animation).
+    const qEl = ov.querySelector('.bz-question');
+    const q = shownQuestion(s.board);
+    if (qEl.textContent !== q) {
+      qEl.textContent = q;
+      qEl.classList.remove('bz-question--in');
+      if (q) {
+        void qEl.offsetWidth;
+        qEl.classList.add('bz-question--in');
+      }
     }
   } else {
     ov.className = 'buzz-overlay';

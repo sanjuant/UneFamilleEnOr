@@ -669,7 +669,10 @@ function renderBoard() {
 
   document.getElementById('boardCardSub').textContent =
     `Manche ${state.currentRoundIndex + 1} (×${board.multiplier})`;
-  document.getElementById('curQuestion').textContent = board.question;
+  const curQ = document.getElementById('curQuestion');
+  curQ.textContent = board.question;
+  curQ.classList.toggle('board-q--hidden', board.questionShown === false);
+  curQ.title = board.questionShown === false ? "Pas encore affichée à l'écran de jeu" : '';
   document.getElementById('strikeCount').textContent = `${board.strikes} / 3`;
   document.getElementById('potInfo').textContent = board.pot * board.multiplier;
 
@@ -884,6 +887,17 @@ function roundGuide(b) {
 
   if (phase === 'faceoff') {
     const first = faceoffFirst(b);
+    if (first == null && b.questionShown === false) {
+      return {
+        title: '① Face-à-face : lisez la question',
+        sub: "L'écran affiche « À vos buzzers ». Lisez la question à voix haute, puis affichez-la. Si une équipe buzze avant, elle s'affiche d'elle-même.",
+        actions: [
+          { label: '📺 Afficher la question', cls: 'btn--gold', primary: true, fn: () => cmd('showQuestion') },
+          { label: `✋ ${teamName(0)}`, fn: () => cmd('faceoffFirst', { team: 0 }) },
+          { label: `✋ ${teamName(1)}`, fn: () => cmd('faceoffFirst', { team: 1 }) },
+        ],
+      };
+    }
     if (first == null) {
       return {
         title: '① Face-à-face : qui a buzzé ?',

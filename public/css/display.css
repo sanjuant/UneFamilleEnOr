@@ -657,6 +657,15 @@ body {
 .bz-question:empty {
   display: none;
 }
+.bz-question--in {
+  animation: bz-question-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes bz-question-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em) scale(0.92);
+  }
+}
 .stage.bz-armed .view--question {
   visibility: hidden;
 }

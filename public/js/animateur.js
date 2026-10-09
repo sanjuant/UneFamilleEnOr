@@ -100,6 +100,7 @@ $('strikeBtn').addEventListener('click', () => {
   if (state && state.board && state.board.strikes < 3) sound('wrong');
 });
 $('strikeClearBtn').addEventListener('click', () => cmd('clearStrikes'));
+$('showQuestionBtn').addEventListener('click', () => cmd('showQuestion'));
 $('revealAllBtn').addEventListener('click', () => {
   cmd('revealAll');
   sound('reveal');
@@ -219,6 +220,7 @@ function renderBoard() {
 
   $('boardTag').textContent = `Manche ${state.currentRoundIndex + 1} (×${board.multiplier})`;
   $('boardQuestion').textContent = board.question;
+  $('showQuestionBtn').hidden = board.questionShown !== false;
   $('strikeNum').textContent = `${board.strikes}/3`;
   $('potVal').textContent = board.pot * board.multiplier;
 

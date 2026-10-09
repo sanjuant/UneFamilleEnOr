@@ -269,6 +269,11 @@ body.anim {
   border-color: var(--gold-3);
   font-weight: 800;
 }
+/* « Afficher la question » : tant que l'écran de jeu ne montre que « À vos buzzers » */
+.show-q-btn {
+  width: 100%;
+  margin-bottom: 12px;
+}
 
 /* Actions de la carte Manches */
 .rounds-actions {
@@ -498,6 +503,7 @@ body.anim {
 }
 
 /* Mode lecture seule : on masque tous les contrôles de pilotage */
+body.vision .show-q-btn,
 body.vision .strikes-mini,
 body.vision .panel__tools,
 body.vision .award,

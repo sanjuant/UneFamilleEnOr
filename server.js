@@ -297,9 +297,11 @@ function recomputePot() {
 }
 
 /** Le jeu a commencé sur le plateau : on retire le prompt « À vos buzzers »
-    (si personne n'a buzzé). Le gagnant éventuel d'un buzz reste inchangé. */
+    (si personne n'a buzzé) et la question passe à l'écran si elle n'y était pas.
+    Le gagnant éventuel d'un buzz reste inchangé. */
 function endFaceOffIfArmed() {
   if (state.buzzer && state.buzzer.armed) state.buzzer.armed = false;
+  if (state.board) state.board.questionShown = true;
 }
 
 /** Compte les buzzers connectés par équipe (mis à jour avant chaque diffusion). */
@@ -318,6 +320,9 @@ function buildBoard(roundIndex) {
   return {
     multiplier: round.multiplier || 1,
     question: round.question || '',
+    // La question n'apparaît à l'écran qu'une fois lue par l'animateur
+    // (commande showQuestion), ou dès qu'une équipe buzze.
+    questionShown: false,
     answers: (round.answers || []).map((a) => ({
       text: a.text,
       points: a.points || 0,
@@ -437,11 +442,13 @@ const handlers = {
     if (i >= 0 && i < state.rounds.length) {
       state.currentRoundIndex = i;
       state.board = buildBoard(i);
+      state.board.questionShown = true;
       state.view = 'question';
     }
   },
 
-  // Lance une manche d'un seul geste : question affichée + buzzers armés (face-à-face).
+  // Lance une manche d'un seul geste : « À vos buzzers » + buzzers armés (face-à-face).
+  // La question reste cachée le temps que l'animateur la lise (cf. showQuestion).
   launchRound(p) {
     const i = Number(p.index);
     if (i >= 0 && i < state.rounds.length) {
@@ -451,6 +458,11 @@ const handlers = {
       state.buzzer.armed = true;
       state.buzzer.winner = null;
     }
+  },
+
+  // Affiche (ou masque) la question de la manche à l'écran de jeu.
+  showQuestion(p) {
+    if (state.board) state.board.questionShown = !(p && p.show === false);
   },
 
   // ---- Plateau (manche) ----
@@ -1040,6 +1052,7 @@ io.on('connection', (socket) => {
       // L'équipe qui a buzzé prend la main sur le plateau en cours.
       if (state.board) {
         state.board.activeTeamIndex = team;
+        state.board.questionShown = true; // buzz pendant la lecture : la question apparaît
         // Face-à-face : l'équipe qui buzze répond la première.
         if (state.board.phase === 'faceoff' && state.board.faceoff.first == null) state.board.faceoff.first = team;
       }
