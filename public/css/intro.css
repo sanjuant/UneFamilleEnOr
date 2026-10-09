@@ -200,6 +200,51 @@ body.show-cursor #hint {
   opacity: 1;
 }
 
+/* Aperçu : volumes de la musique et de l'explosion (visibles avec le curseur) */
+#vol {
+  position: fixed;
+  z-index: 11;
+  left: 18px;
+  bottom: 14px;
+  display: grid;
+  gap: 6px;
+  padding: 10px 14px;
+  font: 500 14px 'Outfit', system-ui, sans-serif;
+  color: rgba(255, 240, 200, 0.9);
+  background: rgba(20, 8, 0, 0.6);
+  border: 1px solid rgba(255, 200, 60, 0.35);
+  border-radius: 12px;
+  cursor: default;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+#vol label {
+  display: grid;
+  grid-template-columns: 7.5em 140px 3.2em;
+  align-items: center;
+  gap: 10px;
+}
+#vol input {
+  width: 100%;
+  margin: 0;
+  accent-color: #ffc83d;
+  cursor: pointer;
+}
+#vol output {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ffe066;
+}
+body.show-cursor #vol,
+#vol:hover,
+#vol:focus-within {
+  opacity: 1;
+}
+body.waiting #vol {
+  display: none;
+}
+
 /* Aperçu : écran d'attente avant le premier clic (déblocage du son) */
 #start {
   position: fixed;

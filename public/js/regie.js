@@ -300,6 +300,12 @@ document.getElementById('nextRoundBtn').addEventListener('click', nextRound);
 document.getElementById('animModeView').addEventListener('click', () => cmd('setAnimatorControl', { on: false }));
 document.getElementById('animModeCtrl').addEventListener('click', () => cmd('setAnimatorControl', { on: true }));
 
+// Curseurs de volume de l'intro : id du curseur (= champ de l'état), son, commande, défaut
+const INTRO_VOLUMES = [
+  { id: 'introVolume', sound: 'introloop', command: 'setIntroVolume', def: 40 },
+  { id: 'explosionVolume', sound: 'explosion', command: 'setExplosionVolume', def: 100 },
+];
+
 // Jingle vidéo : liste des fichiers du serveur + diffusion/arrêt sur l'écran de jeu
 (() => {
   const sel = document.getElementById('videoSelect');
@@ -352,23 +358,28 @@ document.getElementById('animModeCtrl').addEventListener('click', () => cmd('set
   document.getElementById('introStop').addEventListener('click', () => {
     if (authed) socket.emit('intro', { stop: true });
   });
-  // Volume de la musique de l'intro : appliqué partout via l'état (renderIntroVolume).
-  document.getElementById('introVolume').addEventListener('input', (e) => {
-    const volume = Number(e.target.value);
-    document.getElementById('introVolumeVal').textContent = `${volume} %`;
-    SoundManager.setVolume('introloop', volume / 100); // réponse immédiate sous le doigt
-    cmd('setIntroVolume', { volume });
+  // Volumes de la musique de l'intro et de l'explosion : appliqués partout via l'état
+  // (renderIntroVolume).
+  INTRO_VOLUMES.forEach(({ id, sound, command }) => {
+    document.getElementById(id).addEventListener('input', (e) => {
+      const volume = Number(e.target.value);
+      document.getElementById(`${id}Val`).textContent = `${volume} %`;
+      SoundManager.setVolume(sound, volume / 100); // réponse immédiate sous le doigt
+      cmd(command, { volume });
+    });
   });
 })();
 
 function renderIntroVolume() {
-  const v = state.introVolume ?? 40;
-  const slider = document.getElementById('introVolume');
-  // Curseur en main : sa valeur (déjà appliquée) prime sur un écho du serveur en retard.
-  if (document.activeElement === slider) return;
-  SoundManager.setVolume('introloop', v / 100);
-  slider.value = v;
-  document.getElementById('introVolumeVal').textContent = `${v} %`;
+  INTRO_VOLUMES.forEach(({ id, sound, def }) => {
+    const v = state[id] ?? def;
+    const slider = document.getElementById(id);
+    // Curseur en main : sa valeur (déjà appliquée) prime sur un écho du serveur en retard.
+    if (document.activeElement === slider) return;
+    SoundManager.setVolume(sound, v / 100);
+    slider.value = v;
+    document.getElementById(`${id}Val`).textContent = `${v} %`;
+  });
 }
 
 // Thème de l'écran de jeu (sombre / clair / rétro)

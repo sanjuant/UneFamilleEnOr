@@ -77,6 +77,8 @@ let displayTheme = THEMES.includes((process.env.THEME || '').toLowerCase())
 // Volume de la musique de l'intro (0–100), réglé en régie : bas pour que l'animateur
 // puisse parler par-dessus. Réglage de la soirée, gardé d'un jeu à l'autre.
 let introVolume = 40;
+// Volume de l'explosion du M (0–100), réglé en régie aussi.
+let explosionVolume = 100;
 
 // Code d'accès des surfaces de CONTRÔLE (régie + animateur).
 // Défini par REGIE_CODE, sinon généré (6 chiffres aléatoires sûrs).
@@ -769,6 +771,12 @@ const handlers = {
     if (Number.isFinite(v)) introVolume = Math.min(100, Math.max(0, v));
   },
 
+  // Volume de l'explosion du M de l'intro (curseur de la régie).
+  setExplosionVolume(p) {
+    const v = Math.round(Number(p && p.volume));
+    if (Number.isFinite(v)) explosionVolume = Math.min(100, Math.max(0, v));
+  },
+
   // Afficher / masquer le QR code de connexion des buzzers sur l'écran de jeu.
   toggleJoinQR(p) {
     state.showJoinQR = p && p.show !== undefined ? !!p.show : !state.showJoinQR;
@@ -916,6 +924,7 @@ function sendStateTo(socket) {
   state.animatorControl = animatorControl;
   state.theme = displayTheme;
   state.introVolume = introVolume;
+  state.explosionVolume = explosionVolume;
   socket.emit('state', socket.data.authed ? state : publicState());
 }
 
@@ -923,6 +932,7 @@ function broadcastState() {
   state.animatorControl = animatorControl;
   state.theme = displayTheme;
   state.introVolume = introVolume;
+  state.explosionVolume = explosionVolume;
   recomputePot();
   recomputeBuzzerConnected();
   refreshLan();

@@ -130,6 +130,11 @@
   <!-- Tube cathodique : balayage, coins bombés, reflet -->
   <div class="crt"></div>
   <div id="start"><span class="play">▶</span>Cliquer pour lancer l'intro</div>
+  <!-- Volumes de l'aperçu (masqué sur l'écran de jeu) -->
+  <div id="vol">
+    <label><span>🎵 Musique</span><input type="range" id="volMusic" min="0" max="100" step="5" /><output id="volMusicVal"></output></label>
+    <label><span>💥 Explosion</span><input type="range" id="volBoom" min="0" max="100" step="5" /><output id="volBoomVal"></output></label>
+  </div>
   <div id="hint">Clic / Espace : rejouer · B : explosion</div>
 
   <script src="/js/intro.js"></script>

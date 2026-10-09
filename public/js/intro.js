@@ -709,11 +709,37 @@
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);
 
+  /* ---------- Volumes de l'aperçu (menu en bas à gauche), gardés dans ce navigateur ---------- */
+  const vols = { music: 0.2, boom: 1 };
+  try {
+    const saved = JSON.parse(localStorage.getItem('intro.volumes'));
+    for (const k in vols) if (saved && isFinite(saved[k])) vols[k] = Math.min(1, Math.max(0, +saved[k]));
+  } catch { /* stockage indisponible : valeurs par défaut */ }
+
+  function setupVolumeMenu() {
+    const menu = $('vol');
+    if (EMBED) return menu.remove(); // sur l'écran de jeu, les volumes se règlent en régie
+    // Un clic dans le menu ne relance pas l'intro
+    menu.addEventListener('pointerdown', (e) => e.stopPropagation());
+    for (const [key, id] of [['music', 'volMusic'], ['boom', 'volBoom']]) {
+      const input = $(id), out = $(id + 'Val');
+      input.value = Math.round(vols[key] * 100);
+      out.textContent = input.value + ' %';
+      input.addEventListener('input', () => {
+        vols[key] = input.value / 100;
+        out.textContent = input.value + ' %';
+        if (key === 'music' && musicGain) musicGain.gain.setTargetAtTime(vols.music, musicGain.context.currentTime, 0.015);
+        try { localStorage.setItem('intro.volumes', JSON.stringify(vols)); } catch { /* tant pis */ }
+      });
+    }
+  }
+  setupVolumeMenu();
+
   /* ---------- Musique de l'intro en boucle (aperçu seul : sur l'écran de jeu, ---------- *
    * c'est le serveur qui la diffuse). Début « intro-boucle-debut » joué une fois s'il existe. */
-  const MUSIC_VOL = 0.2;
   let music = null; // promesse { buffer, loopStart } (null : pas de fichier)
   let musicStop = null;
+  let musicGain = null;
   let musicToken = 0;
 
   function loadMusic() {
@@ -757,7 +783,8 @@
     (music = music || loadMusic()).then((m) => {
       if (!m || token !== musicToken) return;
       const gain = ac.createGain();
-      gain.gain.value = MUSIC_VOL;
+      gain.gain.value = vols.music;
+      musicGain = gain;
       gain.connect(ac.destination);
       const src = ac.createBufferSource();
       src.buffer = m.buffer;
@@ -769,6 +796,7 @@
       musicStop = () => {
         try { src.stop(); } catch { /* déjà arrêtée */ }
         gain.disconnect();
+        musicGain = null;
       };
     });
   }
@@ -780,7 +808,9 @@
     if (boomSound) { // le fichier de sounds/, sans son silence de tête : il part avec l'image
       const src = ac.createBufferSource();
       src.buffer = boomSound.buffer;
-      src.connect(ac.destination);
+      const gain = ac.createGain();
+      gain.gain.value = vols.boom;
+      src.connect(gain).connect(ac.destination);
       src.start(0, boomSound.lead);
       return;
     }
@@ -790,7 +820,7 @@
     out.threshold.value = -12;
     out.ratio.value = 6;
     const master = ac.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = 0.9 * vols.boom;
     out.connect(master).connect(ac.destination);
 
     // Souffle + crépitement : bruit filtré qui s'assombrit

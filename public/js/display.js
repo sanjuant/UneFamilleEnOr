@@ -214,7 +214,8 @@ document.getElementById('soundGateBtn').addEventListener('click', () => {
 // ---- Rendu ----
 function render(s) {
   cur = s;
-  SoundManager.setVolume('introloop', (s.introVolume ?? 40) / 100); // curseur de la régie
+  SoundManager.setVolume('introloop', (s.introVolume ?? 40) / 100); // curseurs de la régie
+  SoundManager.setVolume('explosion', (s.explosionVolume ?? 100) / 100);
   // Thème choisi en régie (sombre / clair / rétro) appliqué à l'écran de jeu.
   const theme = s.theme || 'dark';
   document.documentElement.setAttribute('data-theme', theme);
