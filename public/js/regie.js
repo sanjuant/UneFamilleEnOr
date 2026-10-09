@@ -1459,10 +1459,15 @@ function validateFinalAnswer(text, points) {
     const m = finalMatch(q, answer);
     pts = fPointsTouched && raw !== '' ? Number(raw) : m ? m.a.points : 0;
   }
-  cmd('setFinalCell', { q, col, answer, points: Math.max(0, Number(pts) || 0) });
+  pts = Math.max(0, Number(pts) || 0);
+  cmd('setFinalCell', { q, col, answer, points: pts });
+  // Copie locale à jour sans attendre l'écho du serveur : si l'on reste sur la même
+  // question (dernière à saisir, ou correction), on réafficherait l'ancienne réponse.
+  Object.assign(fs.cells[q][col], { answer, points: pts });
   fSkipped[col].delete(q);
   fCursor = nextFinalQuestion(fs, col, q, q);
   loadFinalCursor(fs, col);
+  updateFinalWizard(fs, document.getElementById('finalCtrl'));
   focusFinalAnswer();
 }
 
