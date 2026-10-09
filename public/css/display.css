@@ -29,6 +29,7 @@ body {
    ces vues sont autonomes — ça évite les équipes « fantômes » à l'arrivée et
    libère la place verticale. */
 .stage[data-view='logo'] .scorebar,
+.stage[data-view='speaker'] .scorebar,
 .stage[data-view='final'] .scorebar,
 .stage[data-view='winner'] .scorebar {
   display: none;
@@ -181,6 +182,7 @@ body {
 .stage[data-view='logo'] .view--logo,
 .stage[data-view='question'] .view--question,
 .stage[data-view='board'] .view--board,
+.stage[data-view='speaker'] .view--speaker,
 .stage[data-view='final'] .view--final,
 .stage[data-view='winner'] .view--winner {
   display: flex;
@@ -551,6 +553,101 @@ body {
   margin-top: 0.2em;
 }
 
+/* ---------------- La parole à l'intervenant ---------------- */
+.view--speaker {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(20px, 6vh, 70px);
+}
+.speaker-wrap {
+  animation: pop-in 0.7s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+/* Micro dessiné en CSS (pas d'emoji : il doit aussi tenir en thème rétro) */
+.speaker-mic {
+  --m: clamp(46px, 6vw, 96px);
+  position: relative;
+  width: var(--m);
+  height: calc(var(--m) * 1.7);
+  margin: 0 auto 0.4em;
+  filter: drop-shadow(0 0 24px rgba(255, 225, 105, 0.55));
+  animation: float 3s ease-in-out infinite;
+}
+.speaker-mic i {
+  position: absolute;
+  left: 24%;
+  width: 52%;
+  top: 0;
+  height: 62%;
+  border-radius: 999px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 2px, transparent 2px 7px) 0 0 / 100% 55% no-repeat,
+    var(--gold-grad);
+}
+.speaker-mic::before {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 30%;
+  height: 46%;
+  border: calc(var(--m) * 0.08) solid var(--gold-2);
+  border-top: none;
+  border-radius: 0 0 999px 999px;
+}
+.speaker-mic::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  top: 76%;
+  bottom: 0;
+  background:
+    linear-gradient(var(--gold-2), var(--gold-2)) 50% 0 / 16% 100% no-repeat,
+    linear-gradient(var(--gold-2), var(--gold-2)) 50% 100% / 100% 22% no-repeat;
+}
+.speaker-label {
+  font-size: clamp(18px, 3vw, 38px);
+  letter-spacing: 14px;
+  color: var(--gold-2);
+}
+.speaker-name {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 12vw, 200px);
+  line-height: 1;
+  filter: drop-shadow(0 0 40px rgba(245, 197, 24, 0.6));
+}
+.speaker-role {
+  font-size: clamp(18px, 2.6vw, 36px);
+  color: var(--white);
+  margin-top: 0.3em;
+}
+.speaker-role:empty {
+  display: none;
+}
+.speaker-topic {
+  max-width: min(90%, 1400px);
+  padding: 0.7em 1.6em 0.8em;
+  border: 2px solid var(--panel-edge);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--panel) 0%, var(--bg-1) 100%);
+  animation: view-in 0.6s 0.35s ease both;
+}
+.speaker-topic[hidden] {
+  display: none;
+}
+.speaker-topic__label {
+  font-size: clamp(13px, 1.5vw, 22px);
+  letter-spacing: 8px;
+  color: var(--muted);
+}
+.speaker-topic__q {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 3.2vw, 54px);
+  line-height: 1.1;
+  margin-top: 0.15em;
+}
+
 /* ---------------- Overlay son ---------------- */
 .sound-gate {
   position: fixed;
@@ -804,6 +901,30 @@ body {
   height: 100%;
   object-fit: contain;
   background: #000;
+}
+
+/* Intro « Une Faille en Or » : iframe toujours chargée (démarrage instantané),
+   seulement rendue visible pendant la diffusion. */
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 301;
+  background: #000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.7s ease, visibility 0s linear 0.7s;
+}
+.intro-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s ease;
+}
+.intro-overlay iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
 }
 
 /* ================================================================== *

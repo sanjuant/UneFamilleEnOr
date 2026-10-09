@@ -218,6 +218,12 @@ refreshMuteBtn();
 document.querySelectorAll('[data-view]').forEach((b) =>
   b.addEventListener('click', () => cmd('setView', { view: b.dataset.view }))
 );
+// Intervenant : nom (vide = pas d'intervention) et sous-titre
+['speakerName', 'speakerRole'].forEach((id) =>
+  document.getElementById(id).addEventListener('change', (e) =>
+    cmd('setSpeaker', { [id === 'speakerName' ? 'name' : 'role']: e.target.value })
+  )
+);
 document.getElementById('winA').addEventListener('click', () => cmd('setWinner', { index: 0 }));
 document.getElementById('winB').addEventListener('click', () => cmd('setWinner', { index: 1 }));
 
@@ -336,6 +342,12 @@ document.getElementById('animModeCtrl').addEventListener('click', () => cmd('set
   document.getElementById('videoStop').addEventListener('click', () => {
     if (authed) socket.emit('video', { stop: true });
   });
+  document.getElementById('introPlay').addEventListener('click', () => {
+    if (authed) socket.emit('intro', { play: true });
+  });
+  document.getElementById('introStop').addEventListener('click', () => {
+    if (authed) socket.emit('intro', { stop: true });
+  });
 })();
 
 // Thème de l'écran de jeu (sombre / clair / rétro)
@@ -431,6 +443,7 @@ function render() {
   );
 
   renderStatusbar();
+  renderSpeaker();
   renderAnimMode();
   renderThemePicker();
   renderTeams();
@@ -441,8 +454,26 @@ function render() {
 
   // Pendant le jeu, les autres cartes s'estompent : la manche en cours (ou la finale) reste nette.
   const grid = document.querySelector('main.grid');
-  grid.classList.toggle('focus-board', !!state.board && (state.view === 'question' || state.view === 'board'));
+  grid.classList.toggle('focus-board', !!state.board && ['question', 'board', 'speaker'].includes(state.view));
   grid.classList.toggle('focus-final', !!state.final && state.view === 'final');
+}
+
+// Intervenant : champs de réglage (sans écraser une saisie en cours).
+function renderSpeaker() {
+  const sp = state.speaker || { name: '', role: '' };
+  const name = document.getElementById('speakerName');
+  const role = document.getElementById('speakerRole');
+  if (document.activeElement !== name) name.value = sp.name;
+  if (document.activeElement !== role) role.value = sp.role;
+  const btn = document.getElementById('speakerViewBtn');
+  btn.textContent = `🎤 Parole${sp.name ? ' à ' + speakerLabel() : ''}`;
+  btn.disabled = !sp.name;
+}
+
+/** Nom de l'intervenant tel qu'on l'écrit dans la régie (« THOMAS » → « Thomas »). */
+function speakerLabel() {
+  const n = (state.speaker && state.speaker.name) || '';
+  return n.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (m, sep, c) => sep + c.toUpperCase());
 }
 
 // Sélecteur de thème : reflète le thème courant de l'écran de jeu.
@@ -469,7 +500,7 @@ function renderAnimMode() {
   }
 }
 
-const VIEW_LABELS = { logo: 'Logo', question: 'Question', board: 'Plateau', final: 'Manche finale', winner: 'Gagnant' };
+const VIEW_LABELS = { logo: 'Logo', question: 'Question', board: 'Plateau', speaker: 'Intervenant', final: 'Manche finale', winner: 'Gagnant' };
 
 function renderStatusbar() {
   const b = state.board;
@@ -976,17 +1007,25 @@ function roundGuide(b) {
     };
   }
 
-  // Fin de manche
+  // Fin de manche : réponses restantes, puis la parole à l'intervenant, puis la suite.
   const won = b.awarded != null ? b.awarded : act;
   const rest = b.answers.some((a) => !a.revealed);
+  const who = state.speaker && state.speaker.name ? speakerLabel() : '';
+  const speaking = state.view === 'speaker';
+  const talk = who && !b.speakerShown;
   const actions = [];
   if (rest) actions.push({ label: '👁 Révéler le reste', primary: true, fn: () => { cmd('revealAll'); sound('reveal'); } });
-  actions.push(roundNextStep(!rest));
-  return {
-    title: `④ ${won != null ? teamName(won) : 'La famille'} remporte la manche`,
-    sub: `+${b.awardedValue || 0} pts. ${rest ? 'Révélez les réponses restantes pour le public (elles ne rapportent plus rien), puis passez à la suite.' : 'Passez à la suite.'}`,
-    actions,
-  };
+  if (talk) actions.push({ label: `🎤 La parole à ${who}`, cls: 'btn--gold', primary: !rest, fn: () => cmd('setView', { view: 'speaker' }) });
+  actions.push(roundNextStep(!rest && !talk));
+  if (speaking) actions.push({ label: '↩ Revenir au plateau', fn: () => cmd('setView', { view: 'board' }) });
+  const title = speaking
+    ? `④ ${who || "L'intervenant"} a la parole`
+    : `④ ${won != null ? teamName(won) : 'La famille'} remporte la manche`;
+  let sub;
+  if (speaking) sub = `L'écran affiche « La parole à ${who || "l'intervenant"} » avec la question de la manche. Une fois l'intervention terminée, passez à la suite.`;
+  else if (rest) sub = `+${b.awardedValue || 0} pts. Révélez les réponses restantes pour le public (elles ne rapportent plus rien)${talk ? `, puis donnez la parole à ${who}` : ', puis passez à la suite'}.`;
+  else sub = `+${b.awardedValue || 0} pts. ${talk ? `${who} rebondit sur les questions : donnez-lui la parole.` : 'Passez à la suite.'}`;
+  return { title, sub, actions };
 }
 
 let roundActions = [];

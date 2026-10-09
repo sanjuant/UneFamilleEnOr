@@ -173,7 +173,7 @@ function launchNext() {
 // ------------------------------------------------------------------ //
 //  Rendu
 // ------------------------------------------------------------------ //
-const VIEW_LABELS = { logo: 'Logo', question: 'Question', board: 'Plateau', final: 'Manche finale', winner: 'Gagnant' };
+const VIEW_LABELS = { logo: 'Logo', question: 'Question', board: 'Plateau', speaker: 'Intervenant', final: 'Manche finale', winner: 'Gagnant' };
 
 function render() {
   if (!state) return;

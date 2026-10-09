@@ -1419,6 +1419,16 @@ body.regie {
   flex: 1;
   min-width: 220px;
 }
+.intro-row {
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-edge);
+}
+.intro-row__label {
+  font-weight: 600;
+  margin-right: 4px;
+}
 
 /* Page animateur : droits */
 .anim-ctrl-hint {
@@ -1663,4 +1673,20 @@ kbd {
   .fq__cells {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---- Intervenant (la parole entre deux manches) ---- */
+.speaker-edit input[type='text'] {
+  flex: 1;
+  min-width: 160px;
+  background: var(--bg-0);
+  color: var(--white);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+}
+.speaker-edit #speakerName {
+  font-family: var(--font-display);
+  font-size: 16px;
 }

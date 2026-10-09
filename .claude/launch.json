@@ -5,6 +5,7 @@
       "name": "une-famille-en-or",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
+      "autoPort": true,
       "port": 3000
     }
   ]

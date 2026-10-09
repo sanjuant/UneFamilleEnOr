@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Une Faille en Or</title>
+  <link rel="stylesheet" href="/css/fonts.css" />
+  <link rel="stylesheet" href="/css/intro.css" />
+</head>
+<body>
+  <!-- Décor rétro 90's : plateau bleu à rayons, projecteur, paillettes -->
+  <div class="rays"></div>
+  <div class="studio"></div>
+
+  <div id="stage">
+    <div id="logoWrap">
+      <svg id="logo" viewBox="-960 -540 1920 1080" preserveAspectRatio="xMidYMid meet"
+           style="--g: url(#gold); --b: url(#bluePat)">
+        <defs>
+          <!-- Or métallique : bandes claires/sombres qui glissent en continu (reflets) -->
+          <linearGradient id="gold" gradientUnits="userSpaceOnUse" spreadMethod="reflect"
+                          x1="-520" y1="-430" x2="-120" y2="-90">
+            <stop offset="0" stop-color="#9a6c05" />
+            <stop offset="0.12" stop-color="#d6a70e" />
+            <stop offset="0.24" stop-color="#f7d81c" />
+            <stop offset="0.32" stop-color="#fffbd2" />
+            <stop offset="0.40" stop-color="#fbe23a" />
+            <stop offset="0.55" stop-color="#bf920a" />
+            <stop offset="0.68" stop-color="#f2cc16" />
+            <stop offset="0.78" stop-color="#fff59a" />
+            <stop offset="0.89" stop-color="#e6bb12" />
+            <stop offset="1" stop-color="#a77c06" />
+          </linearGradient>
+
+          <linearGradient id="sheenGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#fff" stop-opacity="0" />
+            <stop offset="0.42" stop-color="#fffbe0" stop-opacity="0.35" />
+            <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.95" />
+            <stop offset="0.58" stop-color="#fffbe0" stop-opacity="0.35" />
+            <stop offset="1" stop-color="#fff" stop-opacity="0" />
+          </linearGradient>
+
+          <radialGradient id="glintGlow">
+            <stop offset="0" stop-color="#fff" stop-opacity="0.95" />
+            <stop offset="0.35" stop-color="#fff6c0" stop-opacity="0.45" />
+            <stop offset="1" stop-color="#ffe680" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Ampoules (mêmes teintes que les cadres du thème rétro) -->
+          <radialGradient id="bulbOn" cx="40%" cy="35%" r="65%">
+            <stop offset="0" stop-color="#fffdf0" />
+            <stop offset="0.4" stop-color="#ffe066" />
+            <stop offset="1" stop-color="#e08a00" />
+          </radialGradient>
+          <radialGradient id="bulbHalo">
+            <stop offset="0.3" stop-color="#ffc83d" stop-opacity="0.9" />
+            <stop offset="1" stop-color="#ffc83d" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id="bulbOff" cx="40%" cy="35%" r="65%">
+            <stop offset="0" stop-color="#735519" />
+            <stop offset="1" stop-color="#221603" />
+          </radialGradient>
+
+          <radialGradient id="shadowGrad">
+            <stop offset="0.55" stop-color="#1a0800" stop-opacity="0.75" />
+            <stop offset="1" stop-color="#1a0800" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Textures générées (bleu granuleux, rayures de l'or) -->
+          <pattern id="bluePat" patternUnits="userSpaceOnUse" width="256" height="256">
+            <image id="blueImg" width="256" height="256" />
+          </pattern>
+          <pattern id="grainPat" patternUnits="userSpaceOnUse" width="512" height="512">
+            <image id="grainImg" width="512" height="512" />
+          </pattern>
+
+          <!-- Masque « tout ce qui est doré » : même dessin, or = blanc, bleu = noir -->
+          <mask id="goldMask" maskUnits="userSpaceOnUse" x="-960" y="-540" width="1920" height="1080">
+            <use href="#art" style="--g: #fff; --b: #000" />
+          </mask>
+        </defs>
+
+        <ellipse cx="14" cy="26" rx="640" ry="470" fill="url(#shadowGrad)" />
+
+        <!-- Couronne d'ampoules en chenillard (générée en JS) -->
+        <g id="bulbs"></g>
+
+        <g id="art">
+          <!-- Disque + anneaux -->
+          <circle class="b" r="412" />
+          <circle class="gs" r="356" stroke-width="112" />
+          <circle class="bs" r="388" stroke-width="8" />
+          <circle class="bs" r="360" stroke-width="8" />
+          <circle class="bs" r="332" stroke-width="8" />
+          <circle class="bs" r="300" stroke-width="6" />
+
+          <ellipse id="oHole" class="b" cx="-77" cy="268" rx="56" ry="70" />
+          <rect id="orGap" class="b" x="-77" y="190" width="200" height="162" />
+
+          <!-- Bandeau horizontal -->
+          <rect class="g" x="-592" y="-176" width="1184" height="242" rx="6" />
+          <rect class="b" x="-578" y="-162" width="1156" height="214" rx="3" />
+
+          <!-- Textes -->
+          <text id="tUne" class="t" x="0" y="-178" font-size="128" textLength="290"
+                lengthAdjust="spacingAndGlyphs" stroke-width="12">UNE</text>
+          <text id="tFamille" class="t" x="0" y="40" font-size="240" textLength="1100"
+                lengthAdjust="spacingAndGlyphs" stroke-width="8">FA<tspan id="M">M</tspan>ILLE</text>
+          <text id="tEn" class="t" x="0" y="160" font-size="104" textLength="176"
+                lengthAdjust="spacingAndGlyphs" stroke-width="12">EN</text>
+          <text id="tOr" class="t" x="0" y="352" font-size="232" textLength="340"
+                lengthAdjust="spacingAndGlyphs" stroke-width="18">OR</text>
+        </g>
+
+        <!-- Matière et reflets, limités aux parties dorées -->
+        <g mask="url(#goldMask)">
+          <rect x="-960" y="-540" width="1920" height="1080" fill="url(#grainPat)" opacity="0.4" />
+          <rect id="sheen1" x="-140" y="-1400" width="280" height="2800" fill="url(#sheenGrad)" />
+          <rect id="sheen2" x="-55" y="-1400" width="110" height="2800" fill="url(#sheenGrad)" />
+        </g>
+
+        <g id="glints"></g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Explosion (particules) -->
+  <canvas id="fx"></canvas>
+  <div id="flash"></div>
+  <!-- Tube cathodique : balayage, coins bombés, reflet -->
+  <div class="crt"></div>
+  <div id="hint">Clic / Espace : rejouer · B : explosion</div>
+
+  <script src="/js/intro.js"></script>
+</body>
+</html>

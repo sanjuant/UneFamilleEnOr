@@ -1,0 +1,159 @@
+{
+  "title": "UNE FAILLE EN OR",
+  "teams": ["Équipe Rouge", "Équipe Bleue"],
+  "intervenant": "L'Expert",
+  "rounds": [
+    {
+      "multiplier": 1,
+      "question": "Citez un organisme public français victime d'une fuite de données.",
+      "answers": [
+        { "text": "France Travail", "points": 25 },
+        { "text": "ANTS", "points": 17 },
+        { "text": "Urssaf", "points": 13 },
+        { "text": "Pôle Emploi", "points": 11 },
+        { "text": "EduConnect", "points": 9 },
+        { "text": "Crous / CNOUS", "points": 6 },
+        { "text": "Cadastre", "points": 6 },
+        { "text": "FICOBA (fichier des comptes bancaires)", "points": 5 },
+        { "text": "DGFiP (impôts)", "points": 4 },
+        { "text": "CAF", "points": 4 }
+      ]
+    },
+    {
+      "multiplier": 1,
+      "question": "Citez une menace grave liée à l'intelligence artificielle.",
+      "answers": [
+        { "text": "Deepfakes (fausses vidéos)", "points": 30 },
+        { "text": "Piratage de voitures autonomes", "points": 22 },
+        { "text": "Hameçonnage (phishing) sur mesure", "points": 17 },
+        { "text": "Piratage d'infrastructures pilotées par IA", "points": 13 },
+        { "text": "Chantage à grande échelle", "points": 10 },
+        { "text": "Fake news rédigées par IA", "points": 8 }
+      ]
+    },
+    {
+      "multiplier": 2,
+      "question": "Citez un éditeur ou un constructeur dont les produits sont les plus touchés par des vulnérabilités (CVE) en 2026.",
+      "answers": [
+        { "text": "WordPress (et ses plugins)", "points": 28 },
+        { "text": "Linux (noyau)", "points": 24 },
+        { "text": "Microsoft", "points": 15 },
+        { "text": "Google (Chrome, Android)", "points": 12 },
+        { "text": "Oracle (Java)", "points": 11 },
+        { "text": "IBM", "points": 4 },
+        { "text": "Apple", "points": 3 },
+        { "text": "Mozilla (Firefox)", "points": 2 }
+      ]
+    },
+    {
+      "multiplier": 2,
+      "question": "Citez un risque du Top 10 OWASP 2025 des applications web.",
+      "answers": [
+        { "text": "Contrôle d'accès défaillant", "points": 20 },
+        { "text": "Mauvaise configuration de sécurité", "points": 16 },
+        { "text": "Supply chain logicielle", "points": 13 },
+        { "text": "Cryptographie défaillante", "points": 11 },
+        { "text": "Injection (SQL, XSS…)", "points": 10 },
+        { "text": "Conception non sécurisée", "points": 8 },
+        { "text": "Authentification défaillante", "points": 7 },
+        { "text": "Intégrité des logiciels et des données", "points": 6 },
+        { "text": "Journalisation et alertes insuffisantes", "points": 5 },
+        { "text": "Mauvaise gestion des exceptions", "points": 4 }
+      ]
+    },
+    {
+      "multiplier": 3,
+      "question": "Citez un risque du Top 10 OWASP de la sécurité des API.",
+      "answers": [
+        { "text": "Autorisation au niveau objet (BOLA)", "points": 20 },
+        { "text": "Authentification défaillante", "points": 16 },
+        { "text": "Autorisation au niveau propriété (mass assignment)", "points": 13 },
+        { "text": "Consommation de ressources illimitée", "points": 11 },
+        { "text": "Autorisation au niveau fonction (BFLA)", "points": 10 },
+        { "text": "Flux métier sensibles non protégés", "points": 8 },
+        { "text": "SSRF (requête forgée côté serveur)", "points": 7 },
+        { "text": "Mauvaise configuration de sécurité", "points": 6 },
+        { "text": "Inventaire des API mal géré", "points": 5 },
+        { "text": "Consommation non sûre d'API tierces", "points": 4 }
+      ]
+    }
+  ],
+  "final": {
+    "target": 150,
+    "timers": [30, 45],
+    "questions": [
+      {
+        "question": "Citez un critère de sécurité qu'une violation de données peut compromettre.",
+        "answers": [
+          { "text": "Confidentialité", "points": 45 },
+          { "text": "Intégrité", "points": 30 },
+          { "text": "Disponibilité", "points": 25 }
+        ]
+      },
+      {
+        "question": "Citez une mesure pour éviter une violation de données personnelles.",
+        "answers": [
+          { "text": "Contrôle d'accès", "points": 25 },
+          { "text": "Chiffrement", "points": 22 },
+          { "text": "Cloisonnement", "points": 15 },
+          { "text": "Sauvegarde", "points": 13 },
+          { "text": "Traçabilité (logs)", "points": 10 },
+          { "text": "Anonymisation", "points": 6 },
+          { "text": "Pseudonymisation", "points": 5 },
+          { "text": "Archivage", "points": 4 }
+        ]
+      },
+      {
+        "question": "Citez une menace de l'intelligence artificielle de gravité moyenne.",
+        "answers": [
+          { "text": "Robots militaires détournés", "points": 30 },
+          { "text": "Escroquerie à l'IA", "points": 22 },
+          { "text": "Corruption de données (empoisonnement)", "points": 16 },
+          { "text": "Cyberattaque guidée par l'IA", "points": 12 },
+          { "text": "Drones d'attaque autonomes", "points": 8 },
+          { "text": "Refus d'accès (déni de service)", "points": 5 },
+          { "text": "Reconnaissance faciale détournée", "points": 4 },
+          { "text": "Manipulation des marchés financiers", "points": 3 }
+        ]
+      },
+      {
+        "question": "Citez un éditeur dont les failles sont les plus exploitées par les attaquants en 2026.",
+        "answers": [
+          { "text": "Microsoft", "points": 41 },
+          { "text": "Cisco", "points": 16 },
+          { "text": "WordPress", "points": 10 },
+          { "text": "Google", "points": 7 },
+          { "text": "Apple", "points": 4 },
+          { "text": "Adobe", "points": 4 },
+          { "text": "Linux", "points": 3 },
+          { "text": "Oracle", "points": 3 },
+          { "text": "IBM", "points": 1 }
+        ]
+      },
+      {
+        "question": "Citez la mesure de sécurité qui vous paraît la plus fiable.",
+        "answers": [
+          { "text": "Authentification multi-facteur (MFA)", "points": 19 },
+          { "text": "Coffre-fort à mots de passe", "points": 13 },
+          { "text": "Correctifs de sécurité (patchs)", "points": 10 },
+          { "text": "Audits de code (Checkmarx)", "points": 7 },
+          { "text": "Formation cyber", "points": 7 },
+          { "text": "Pare-feu (firewall)", "points": 6 },
+          { "text": "SOC", "points": 6 },
+          { "text": "Vidéos de sensibilisation (Breaking the Hacker's Code)", "points": 6 },
+          { "text": "Tests de sécurité", "points": 6 },
+          { "text": "Antivirus", "points": 4 },
+          { "text": "Campagnes de faux phishing", "points": 4 },
+          { "text": "Cloisonnement réseau", "points": 4 },
+          { "text": "E-learning cybersécurité", "points": 4 },
+          { "text": "WAF", "points": 3 },
+          { "text": "Sauvegarde des données", "points": 3 },
+          { "text": "Bug bounty", "points": 2 },
+          { "text": "Red Team", "points": 1 },
+          { "text": "Journalisation (logs)", "points": 1 },
+          { "text": "Préparation à la gestion des incidents", "points": 1 }
+        ]
+      }
+    ]
+  }
+}

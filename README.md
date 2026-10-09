@@ -14,6 +14,7 @@ accessibles depuis n'importe quel appareil du réseau local.
 - 🎵 **Sons** : 11 sons (générique, musique de manche, buzzer, bonne/mauvaise réponse, points, signal des 5 secondes, temps écoulé, musique de finale, applaudissements, victoire). Dépose tes propres fichiers (mp3, wav, ogg, m4a…) dans `sounds/` : détectés à chaud, état visible dans la régie, repli automatique sur des sons de synthèse.
 - 🎬 **Jingle vidéo** : diffuse une vidéo en plein écran sur l'écran de jeu depuis la régie (fichiers déposés dans `media/` ou URL) — préchargée par l'écran de jeu dès son ouverture (démarrage instantané), arrêt en fondu.
 - 🖥️ **Thèmes de l'écran de jeu** : **sombre**, **clair** ou **rétro 90s** (télé cathodique, plateau à rayons, cadres d'ampoules en chenillard, afficheurs à ampoules, lettrage or en relief) — choisis en régie.
+- 🎤 **La parole à l'intervenant** : après chaque manche classique, un écran « La parole à Thomas » (avec la question de la manche) s'intercale pour qu'un intervenant rebondisse sur le sujet.
 - 🎉 Écran de victoire avec confettis.
 - 📖 **Règles intégrées** : page `/regles` (avec déroulé détaillé de la manche finale) accessible depuis la régie.
 - 🔔 **Buzzers smartphone** : page `/buzzer` — deux téléphones servent de buzzers pour le face-à-face (le premier qui appuie prend la main). **QR code** de connexion intégré.
@@ -81,6 +82,7 @@ remplacez `localhost` par l'**adresse IP de ce PC**. Exemple : `http://192.168.1
 ## Confort de régie
 
 - **Assistant de manche** : la carte « Manche en cours » guide chaque manche, **face-à-face → jeu → vol → fin de manche**, avec la consigne du moment et son bouton principal (touche `Entrée`). Au face-à-face, on clique (ou tape) la réponse de chaque joueur : la régie compare les places et donne la main à la mieux classée, puis « joue » ou « passe ». Au 3e X, elle passe d'elle-même au vol ; le vol réussi ou raté donne la cagnotte à la bonne famille en un clic.
+- **Intervenant entre les manches** : en fin de manche, l'assistant propose **« 🎤 La parole à Thomas »** (`Entrée`) avant la manche suivante. L'écran de jeu affiche son nom (et un sous-titre facultatif) avec la question qui vient d'être jouée. Nom et sous-titre se règlent dans la carte « 🎬 Affichage » (ou dans le JSON, clé `intervenant`) ; un nom vide supprime l'étape. Le bouton **« 🎤 Parole »** l'affiche aussi à tout moment.
 - **« Ce que dit le joueur »** : on tape la réponse entendue puis `Entrée` : révélée si elle est au tableau (même formulée autrement), sinon X.
 - Pendant le jeu, les **autres cartes s'estompent** (nettes au survol) : la manche en cours, ou la finale, ressort sans que rien ne bouge.
 - **Lancer une manche en 1 clic** : clic sur une manche = « À vos buzzers » à l'écran + buzzers armés ; l'animateur lit la question, puis **« 📺 Afficher la question »** (`Entrée`) la montre à l'écran (un buzz pendant la lecture l'affiche aussi). Bouton **« ▶ Lancer la manche suivante »** (touche `N`). Les manches jouées sont cochées ✓.
@@ -193,6 +195,7 @@ Déposez vos fichiers `.json` dans le dossier **`questions/`** du serveur : ils 
 {
   "title": "UNE FAMILLE EN OR",
   "teams": ["Équipe 1", "Équipe 2"],
+  "intervenant": "Thomas",                  // ou { "name": "Thomas", "role": "Expert sécurité" } — "" : aucun
   "rounds": [
     {
       "multiplier": 1,                       // ×1, ×2, ×3...

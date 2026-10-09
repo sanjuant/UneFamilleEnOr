@@ -263,7 +263,10 @@ function freshState() {
     rounds: [],          // manches normales chargées depuis le JSON
     final: null,         // définition de la manche finale (depuis le JSON)
     currentRoundIndex: -1,
-    view: 'logo',        // logo | question | board | final | winner
+    view: 'logo',        // logo | question | board | speaker | final | winner
+    // Intervenant qui prend la parole après chaque manche classique (vue speaker).
+    // Nom vide : pas d'intervention (l'étape disparaît de l'assistant de manche).
+    speaker: { name: 'L\'EXPERT', role: '' },
     board: null,         // plateau de la manche en cours
     finalState: null,    // état vivant de la manche finale
     winnerTeam: null,    // index de l'équipe gagnante (vue winner)
@@ -330,6 +333,7 @@ function buildBoard(roundIndex) {
     })),
     pot: 0,
     strikes: 0,
+    speakerShown: false, // l'intervenant a déjà pris la parole sur cette manche
     activeTeamIndex: null,
     awarded: null,       // équipe ayant reçu la cagnotte (anti double-crédit)
     awardedValue: 0,     // montant crédité (pour pouvoir corriger l'attribution)
@@ -393,7 +397,17 @@ const handlers = {
     const data = p.data || {};
     clearFinalTimerExpiry();
     setFinalMusic(false);
+    const speaker = state.speaker; // réglage de la soirée : gardé d'un jeu à l'autre
     state = freshState();
+    state.speaker = speaker;
+    // « intervenant » : "Thomas" ou { "name": "Thomas", "role": "Expert sécurité" }
+    const sp = data.intervenant ?? data.speaker;
+    if (sp != null) {
+      state.speaker = {
+        name: (typeof sp === 'string' ? sp : sp.name || '').toString().toUpperCase().slice(0, 60),
+        role: (typeof sp === 'string' ? '' : sp.role || '').toString().slice(0, 120),
+      };
+    }
     state.title = (data.title || 'UNE FAMILLE EN OR').toString();
     if (Array.isArray(data.teams) && data.teams.length >= 2) {
       state.teams = data.teams.slice(0, 2).map((t) => ({
@@ -435,6 +449,16 @@ const handlers = {
   // ---- Navigation des vues ----
   setView(p) {
     state.view = p.view;
+    if (p.view === 'speaker') {
+      state.buzzer.armed = false; // pas d'« À vos buzzers » par-dessus l'intervenant
+      if (state.board) state.board.speakerShown = true;
+    }
+  },
+
+  // Intervenant (nom vide = pas d'intervention entre les manches).
+  setSpeaker(p) {
+    if (p.name !== undefined) state.speaker.name = (p.name || '').toString().trim().toUpperCase().slice(0, 60);
+    if (p.role !== undefined) state.speaker.role = (p.role || '').toString().trim().slice(0, 120);
   },
 
   selectRound(p) {
@@ -991,6 +1015,14 @@ io.on('connection', (socket) => {
     const src = (msg.src || '').toString().slice(0, 500);
     // N'accepte qu'un fichier local /media ou une URL http(s) (anti-abus léger).
     if (/^\/media\//.test(src) || /^https?:\/\//i.test(src)) io.emit('video', { src });
+  });
+
+  // Intro animée « Une Faille en Or » (page /intro.html) jouée sur l'écran de jeu.
+  socket.on('intro', (msg) => {
+    msg = msg || {};
+    if (!socket.data.authed) return;
+    if (socket.data.role !== 'regie' && !animatorControl) return;
+    io.emit('intro', msg.stop ? { stop: true } : { play: true });
   });
 
   // Fichiers de questions du serveur : liste + chargement (mêmes droits qu'une commande).

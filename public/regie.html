@@ -72,6 +72,11 @@
         <button class="btn pill" data-view="logo">Logo</button>
         <button class="btn pill" data-view="question">Question seule</button>
         <button class="btn pill" data-view="board">Plateau</button>
+        <button class="btn pill" data-view="speaker" id="speakerViewBtn">🎤 Parole</button>
+      </div>
+      <div class="row wrap speaker-edit">
+        <input type="text" id="speakerName" placeholder="Intervenant (vide = aucun)" title="Prend la parole après chaque manche classique — laisser vide pour sauter cette étape" />
+        <input type="text" id="speakerRole" placeholder="Sous-titre (optionnel)" title="Affiché sous son nom, ex. « Expert sécurité »" />
       </div>
       <div class="row">
         <button class="btn pill btn--gold" id="winA">🏆 Victoire Équipe 1</button>
@@ -118,6 +123,12 @@
         <input type="text" id="videoUrl" class="video-url" placeholder="…ou colle une URL de vidéo (.mp4 / .webm)" />
       </div>
       <p class="rounds-hint">Dépose des fichiers <code>.mp4</code>/<code>.webm</code> dans le dossier <code>media/</code> du serveur, ou colle une URL. La vidéo s'affiche en plein écran sur l'écran de jeu.</p>
+      <div class="row wrap intro-row">
+        <span class="intro-row__label">💥 Intro « Une Faille en Or »</span>
+        <button class="btn btn--gold" id="introPlay">▶ Lancer l'intro</button>
+        <button class="btn" id="introStop">⏹ Stop</button>
+      </div>
+      <p class="rounds-hint">Animation (≈ 20 s) : le logo brille, puis le M explose. Se ferme toute seule à la fin. Aperçu : <a href="/intro.html" target="_blank" rel="noopener">/intro.html</a>.</p>
     </section>
 
     <!-- Buzzers (face-à-face) -->

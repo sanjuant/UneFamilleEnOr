@@ -63,6 +63,20 @@
       <div class="board" id="board"></div>
     </section>
 
+    <!-- VUE : la parole à l'intervenant (entre deux manches) -->
+    <section class="view view--speaker" data-view="speaker">
+      <div class="speaker-wrap">
+        <div class="speaker-mic" aria-hidden="true"><i></i></div>
+        <div class="speaker-label">LA PAROLE À</div>
+        <h1 class="speaker-name gold-text" id="speakerName"></h1>
+        <div class="speaker-role" id="speakerRole"></div>
+      </div>
+      <div class="speaker-topic" id="speakerTopic">
+        <div class="speaker-topic__label" id="speakerTopicLabel"></div>
+        <p class="speaker-topic__q" id="speakerQuestion"></p>
+      </div>
+    </section>
+
     <!-- VUE : manche finale -->
     <section class="view view--final" data-view="final">
       <div class="final-head">
@@ -107,6 +121,11 @@
       <div class="join-qr__url" id="joinQrUrl"></div>
       <div class="join-qr__hint">Scannez avec votre téléphone</div>
     </div>
+  </div>
+
+  <!-- Intro animée « Une Faille en Or » (préchargée, lancée par la régie) -->
+  <div class="intro-overlay" id="introOverlay">
+    <iframe id="introFrame" src="/intro.html?embed" allow="autoplay" title="Intro Une Faille en Or" tabindex="-1"></iframe>
   </div>
 
   <!-- Jingle vidéo (diffusé par la régie) -->

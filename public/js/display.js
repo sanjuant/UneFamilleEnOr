@@ -125,9 +125,47 @@ function fadeOutVideo() {
 socket.on('video', (msg) => {
   if (!msg) return;
   if (msg.stop) fadeOutVideo();
-  else if (msg.src) playVideo(msg.src);
+  else if (msg.src) {
+    stopIntro();
+    playVideo(msg.src);
+  }
 });
 document.getElementById('jingleVideo').addEventListener('ended', fadeOutVideo);
+
+// ---- Intro animée « Une Faille en Or » (iframe /intro.html?embed) ----
+const introOverlay = document.getElementById('introOverlay');
+const introFrame = document.getElementById('introFrame');
+let introStopTimer = null;
+function introApi() {
+  try {
+    return introFrame.contentWindow.intro || null;
+  } catch {
+    return null;
+  }
+}
+function playIntro() {
+  const api = introApi();
+  if (!api) return;
+  hideVideo();
+  clearTimeout(introStopTimer);
+  api.onEnd = stopIntro; // fin de l'animation → fondu de sortie
+  api.restart({
+    mute: SoundManager.isMuted() || !SoundManager.isUnlocked(),
+    crt: !isRetro(), // le thème rétro a déjà son propre tube cathodique
+  });
+  introOverlay.classList.add('show');
+}
+function stopIntro() {
+  if (!introOverlay.classList.contains('show')) return;
+  introOverlay.classList.remove('show');
+  clearTimeout(introStopTimer);
+  introStopTimer = setTimeout(() => introApi()?.stop(), 800); // après le fondu
+}
+socket.on('intro', (msg) => {
+  if (!msg) return;
+  if (msg.stop) stopIntro();
+  else if (msg.play) playIntro();
+});
 
 // ---- Thème rétro : effets « télé cathodique » ----
 const isRetro = () => !!(cur && cur.theme === 'retro');
@@ -212,6 +250,7 @@ function render(s) {
   renderQuestion(s);
   renderBoard(board);
   renderFinal(s.finalState, s);
+  renderSpeaker(s);
   renderWinner(s);
   renderBuzzer(s);
   renderJoinQR(s);
@@ -469,6 +508,18 @@ function updateFinalTimerBig(fs) {
 setInterval(() => {
   if (cur && cur.view === 'final' && cur.finalState) updateFinalTimerBig(cur.finalState);
 }, 250);
+
+// La parole à l'intervenant : son nom + la question de la manche qui vient d'être jouée.
+function renderSpeaker(s) {
+  if (s.view !== 'speaker') return;
+  const sp = s.speaker || {};
+  setText3d(document.getElementById('speakerName'), sp.name || '');
+  document.getElementById('speakerRole').textContent = sp.role || '';
+  const q = s.board && s.board.question;
+  document.getElementById('speakerTopic').hidden = !q;
+  document.getElementById('speakerTopicLabel').textContent = `MANCHE ${s.currentRoundIndex + 1}`;
+  document.getElementById('speakerQuestion').textContent = q ? `« ${q} »` : '';
+}
 
 function renderWinner(s) {
   if (s.view !== 'winner') return;

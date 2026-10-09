@@ -282,11 +282,11 @@
 }
 
 /* ---------------- Cadres d'ampoules en chenillard ---------------- */
-[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon) {
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .speaker-wrap, .bz-ribbon) {
   position: relative;
 }
-[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::before,
-[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::after {
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .speaker-wrap, .bz-ribbon)::before,
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .speaker-wrap, .bz-ribbon)::after {
   content: '';
   position: absolute;
   inset: calc(-1 * var(--mq, 18px));
@@ -294,7 +294,7 @@
   border-image: var(--bulbs-a) 20 / var(--mq, 18px) round;
   pointer-events: none;
 }
-[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::after {
+[data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .speaker-wrap, .bz-ribbon)::after {
   border-image-source: var(--bulbs-b);
   animation: chase 0.9s steps(1, end) infinite;
 }
@@ -928,6 +928,52 @@
   letter-spacing: 0.04em;
 }
 
+/* ---------------- La parole à l'intervenant ---------------- */
+[data-theme='retro'] .speaker-wrap {
+  --mq: clamp(14px, 1.6vw, 26px);
+  padding: clamp(14px, 3.5vh, 44px) clamp(30px, 6vw, 110px) clamp(18px, 4vh, 50px);
+  background: radial-gradient(ellipse 90% 130% at 50% 0%, #2c66ff 0%, #1036b4 45%, #061a6b 100%);
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px #01061f, 0 22px 44px rgba(0, 0, 0, 0.6), inset 0 0 50px rgba(0, 0, 0, 0.45);
+}
+[data-theme='retro'] .speaker-mic {
+  filter: drop-shadow(0.03em 0.04em 0 #7e4600) drop-shadow(0 0 0.3em rgba(255, 200, 40, 0.5));
+}
+[data-theme='retro'] .speaker-label {
+  display: inline-block;
+  margin: 0.1em 0 0.25em;
+  padding: 0.05em 0.75em 0.08em 1.05em; /* l'interlettrage ajoute de l'air à droite */
+  font-family: var(--font-display);
+  letter-spacing: 0.3em;
+  color: #fff;
+  background: linear-gradient(180deg, #ff6a5a 0%, #e0101e 47%, #b0000e 53%, #d0081a 100%);
+  border: 0.08em solid;
+  border-color: var(--bevel);
+  border-radius: 0.15em;
+  text-shadow: 0.05em 0.06em 0 #4a0000;
+  box-shadow: 0 0 0 0.05em #01061f, 0 0.12em 0 rgba(0, 0, 0, 0.4);
+}
+[data-theme='retro'] .speaker-name {
+  transform: skewX(-7deg);
+}
+[data-theme='retro'] .speaker-role {
+  color: #fff;
+  text-shadow: var(--tv-shadow);
+}
+[data-theme='retro'] .speaker-topic {
+  background: linear-gradient(180deg, #0b2a9c 0%, #061a6b 100%);
+  border: 3px solid #01061f;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px rgba(120, 170, 255, 0.35), 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+[data-theme='retro'] .speaker-topic__label {
+  color: #ffd84a;
+}
+[data-theme='retro'] .speaker-topic__q {
+  color: #fff;
+  text-shadow: var(--tv-shadow);
+}
+
 /* ---------------- Buzzers (face-à-face) ---------------- */
 [data-theme='retro'] .buzz-overlay.armed::before {
   background: radial-gradient(circle at 50% 50%, rgba(3, 10, 44, 0.5), rgba(3, 10, 44, 0.88));
@@ -1058,8 +1104,9 @@
   [data-theme='retro'] .crt::after,
   [data-theme='retro'] .studio-bg::after,
   [data-theme='retro'] :is(.logo-sub, .pot__mult, .round-badge__mult, .bz-icon),
-  [data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .bz-ribbon)::after,
+  [data-theme='retro'] :is(.logo-wrap, .view--board .board, .winner-wrap, .speaker-wrap, .bz-ribbon)::after,
   [data-theme='retro'] .stage .view,
+  .speaker-mic,
   [data-theme='retro'] body.shake .stage,
   .crt.boot .crt__boot,
   .crt.zap .crt__zap {
