@@ -10,7 +10,8 @@
  *    ?embed     intégrée à l'écran de jeu : attend restart() / boom() ; les sons
  *               (musique, explosion) sont alors diffusés par le serveur (régie + écran de jeu)
  *    ?end=20    instant de fin → appelle intro.onEnd
- *  Clavier : Espace / clic = rejouer, B = explosion (hors embed).
+ *  Clavier : Espace / clic = rejouer, B = explosion (hors embed). Hors embed et hors
+ *  ?mute, un premier clic lance l'intro (déblocage du son par le navigateur).
  * ------------------------------------------------------------------ */
 (() => {
   'use strict';
@@ -957,9 +958,18 @@
     stepFx(0, 0);
   }
 
+  // Aperçu : un premier clic lance l'intro (sans geste, le navigateur bloque le son).
+  let waiting = !EMBED && !muted && !params.has('at');
+  function start() {
+    waiting = false;
+    document.body.classList.remove('waiting');
+    restart();
+  }
+
   if (!EMBED) {
-    window.addEventListener('pointerdown', () => restart());
+    window.addEventListener('pointerdown', () => (waiting ? start() : restart()));
     window.addEventListener('keydown', (e) => {
+      if (waiting) { e.preventDefault(); start(); return; }
       if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); restart(); }
       if (e.code === 'KeyB') boomNow();
     });
@@ -1008,7 +1018,10 @@
 
   ready = true;
   if (EMBED) document.body.classList.add('embed');
-  else {
+  else if (waiting) {
+    paused = true;
+    document.body.classList.add('waiting');
+  } else {
     logoWrap.classList.add('appear');
     playMusic();
   }

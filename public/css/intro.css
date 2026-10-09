@@ -200,6 +200,51 @@ body.show-cursor #hint {
   opacity: 1;
 }
 
+/* Aperçu : écran d'attente avant le premier clic (déblocage du son) */
+#start {
+  position: fixed;
+  z-index: 12;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4vmin;
+  font: 800 4.2vmin 'Outfit', system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffe066;
+  text-shadow: 0 0.4vmin 0 #8a5a00, 0 0 3vmin rgba(255, 200, 60, 0.55);
+  background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(1, 5, 30, 0.2), rgba(1, 5, 30, 0.7));
+}
+#start .play {
+  display: grid;
+  place-items: center;
+  width: 16vmin;
+  height: 16vmin;
+  padding-left: 1.6vmin;
+  box-sizing: border-box;
+  border-radius: 50%;
+  font-size: 7vmin;
+  color: #071c70;
+  text-shadow: none;
+  background: radial-gradient(circle at 40% 35%, #fffdf0, #ffe066 40%, #e08a00);
+  box-shadow: 0 0 0 0.8vmin #8a5a00, 0 0 5vmin rgba(255, 200, 60, 0.7);
+  animation: start-pulse 1.6s ease-in-out infinite;
+}
+@keyframes start-pulse {
+  50% { transform: scale(1.08); box-shadow: 0 0 0 0.8vmin #8a5a00, 0 0 9vmin rgba(255, 200, 60, 0.9); }
+}
+body.waiting {
+  cursor: pointer;
+}
+body.waiting #start {
+  display: flex;
+}
+body.waiting #logoWrap {
+  opacity: 0;
+}
+
 /* Intégrée à l'écran de jeu (iframe) */
 body.embed #hint,
 body.no-crt .crt {
