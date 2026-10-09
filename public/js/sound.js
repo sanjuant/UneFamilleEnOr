@@ -20,9 +20,8 @@ const SoundManager = (() => {
     { key: 'applause', file: 'applause', emoji: '👏', label: 'Applaudis­sements', hint: 'Auto avec les points' },
     { key: 'win', file: 'win', emoji: '🏆', label: 'Victoire', hint: 'Auto sur l’écran du gagnant', music: true, cls: 'btn--gold' },
     { key: 'introloop', file: 'intro-boucle', emoji: '🌟', label: "Musique de l'intro", hint: 'Auto pendant l’intro animée · en boucle', music: true, loop: true },
-    { key: 'explosion', file: 'explosion', emoji: '💥', label: 'Explosion', hint: 'Auto quand le M de l’intro explose', swell: true },
+    { key: 'explosion', file: 'explosion', emoji: '💥', label: 'Explosion', hint: 'Auto quand le M de l’intro explose' },
   ];
-  // `swell` : la musique en cours monte à 100 % le temps du son, puis revient à son volume.
   const BY_KEY = Object.fromEntries(CATALOG.map((s) => [s.key, s]));
 
   let files = {};        // clé -> { file, url } du fichier perso trouvé
@@ -204,7 +203,6 @@ const SoundManager = (() => {
     if (muted) return;
     const def = BY_KEY[name];
     if (def && def.music) CATALOG.forEach((s) => s.music && s.key !== name && stop(s.key));
-    if (def && def.swell) swellMusic();
     stop(name); // évite les superpositions du même son
     const loop = opts.loop ?? !!(def && def.loop);
     if (loop && heads[name] && (await playHeadLoop(name, opts))) return;
@@ -230,7 +228,6 @@ const SoundManager = (() => {
   function stop(name) {
     tokens[name] = (tokens[name] || 0) + 1;
     delete gains[name];
-    delete swells[name];
     const el = playing[name];
     if (el) {
       el.pause();
@@ -245,53 +242,17 @@ const SoundManager = (() => {
     }
   }
 
-  // ---- Volumes : volume de base par son (curseur de la régie) + montée « swell » ----
-  const volumes = {}; // clé -> volume de base 0–1 (défaut 1)
-  const swells = {};  // clé -> instant (performance.now) du début de la montée
-  const SWELL_HOLD = 1.5; // s à 100 % (l'explosion dure ~1,3 s)
-  const SWELL_BACK = 2.5; // s de redescente vers le volume de base
-  let swellTimer = null;
+  // ---- Volume de base par son (curseur de la régie) ----
+  const volumes = {}; // clé -> volume 0–1 (défaut 1)
   const baseVol = (key) => volumes[key] ?? 1;
 
-  /** Volume courant d'un son : celui du curseur, ou la montée en cours. */
-  function levelOf(key) {
-    const base = baseVol(key);
-    if (swells[key] === undefined) return base;
-    const t = (performance.now() - swells[key]) / 1000;
-    if (t < SWELL_HOLD) return 1;
-    if (t < SWELL_HOLD + SWELL_BACK) return 1 + (base - 1) * ((t - SWELL_HOLD) / SWELL_BACK);
-    delete swells[key];
-    return base;
-  }
-  function applyVolume(key) {
-    const v = levelOf(key);
-    const g = gains[key];
-    if (g) g.gain.setTargetAtTime(v, g.context.currentTime, 0.015);
-    const el = playing[key];
-    if (el) el.volume = v;
-  }
-
-  /** Volume de base d'un son (0–1), appliqué en direct s'il joue. */
+  /** Volume d'un son (0–1), appliqué en direct s'il joue. */
   function setVolume(key, v) {
-    volumes[key] = Math.min(1, Math.max(0, Number(v) || 0));
-    applyVolume(key);
-  }
-
-  /**
-   * Son « swell » (l'explosion) : les musiques en cours passent à 100 % le temps
-   * du son, puis redescendent en fondu à leur volume de base.
-   */
-  function swellMusic() {
-    const now = performance.now();
-    CATALOG.forEach(({ key, music }) => {
-      if (music && (gains[key] || playing[key])) swells[key] = now;
-    });
-    Object.keys(swells).forEach(applyVolume);
-    clearInterval(swellTimer);
-    swellTimer = setInterval(() => {
-      Object.keys(swells).forEach(applyVolume);
-      if (!Object.keys(swells).length) clearInterval(swellTimer);
-    }, 30);
+    const vol = (volumes[key] = Math.min(1, Math.max(0, Number(v) || 0)));
+    const g = gains[key];
+    if (g) g.gain.setTargetAtTime(vol, g.context.currentTime, 0.015);
+    const el = playing[key];
+    if (el) el.volume = vol;
   }
 
   function stopAll() {
@@ -318,7 +279,7 @@ const SoundManager = (() => {
     const out = c.createGain();
     out.gain.value = baseVol(name);
     out.connect(c.destination);
-    gains[name] = out; // volume réglable en direct (setVolume, swellMusic)
+    gains[name] = out; // volume réglable en direct (setVolume)
     const b = { c, out, t0: c.currentTime + 0.02, timers: [] };
     const stopFn = () => {
       b.timers.forEach(clearTimeout);
