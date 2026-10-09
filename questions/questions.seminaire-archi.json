@@ -104,7 +104,7 @@
         ]
       },
       {
-        "question": "Citez une menace de l'intelligence artificielle de gravité moyenne.",
+        "question": "Citez une menace de l'intelligence artificielle de risque moyen.",
         "answers": [
           { "text": "Robots militaires détournés", "points": 30 },
           { "text": "Escroquerie à l'IA", "points": 22 },
