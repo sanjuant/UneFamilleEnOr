@@ -152,11 +152,12 @@ function playIntro() {
   introOverlay.classList.add('show');
 }
 // L'intro tourne en boucle ; c'est la régie qui fait exploser le M.
-// Les sons (musique, explosion) arrivent par l'événement 'sound' du serveur.
+// Les sons (musique, explosion) arrivent par l'événement 'sound' du serveur, juste avant :
+// l'intro suit la lecture du son d'explosion pour partir pile avec lui.
 function boomIntro() {
   const api = introApi();
   if (!api || !introOverlay.classList.contains('show')) return;
-  api.boom();
+  api.boom(() => SoundManager.position('explosion'));
 }
 function stopIntro() {
   if (!introOverlay.classList.contains('show')) return;

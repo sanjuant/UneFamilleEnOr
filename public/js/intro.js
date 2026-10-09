@@ -252,12 +252,96 @@
   const fireSprites = Array.from({ length: FIRE_N }, (_, i) => makeSprite(lerpColor(FIRE_PAL, i / (FIRE_N - 1))));
   const smokeSprite = makeSprite([42, 36, 36], 0.45);
 
-  let fire = [], smoke = [], sparks = [], shards = [], embers = [], rings = [];
-  let boomInfo = null; // { t, x, y, s }
+  let fire = [], smoke = [], sparks = [], shards = [], embers = [], rings = [], debris = [], flyers = [];
+  let boomInfo = null; // { t, x, y, s, hw, onset }
   let shakeAmp = 0;
+  const bulbs = $('bulbs');
 
   function logoScale() {
     return Math.min(W / 1920, H / 1080);
+  }
+
+  /* ---------- Son de l'explosion : l'animation suit son volume ---------- *
+   * sounds/explosion.* est décodé et analysé : enveloppe (niveau 0–1 par pas de
+   * 10 ms) et crépitements (brusques remontées). Sans fichier : enveloppe type. */
+  const ENV_STEP = 0.01;
+  let boomSound = null; // { url, buffer, env, lead, dur, onsets }
+
+  function analyseBoom(url, buffer) {
+    const chans = Array.from({ length: buffer.numberOfChannels }, (_, i) => buffer.getChannelData(i));
+    const w = Math.round(buffer.sampleRate * ENV_STEP);
+    const frames = Math.ceil(buffer.length / w);
+    const db = new Float32Array(frames);
+    let peak = 1e-9;
+    for (let f = 0; f < frames; f++) {
+      let sum = 0;
+      const end = Math.min(buffer.length, (f + 1) * w);
+      for (let i = f * w; i < end; i++) {
+        let v = 0;
+        for (const c of chans) v += c[i];
+        v /= chans.length;
+        sum += v * v;
+      }
+      db[f] = Math.sqrt(sum / Math.max(1, end - f * w));
+      peak = Math.max(peak, db[f]);
+    }
+    for (let f = 0; f < frames; f++) db[f] = 20 * Math.log10(db[f] / peak + 1e-6);
+    // Niveau 0–1 (−48 dB → 0), qui retombe en douceur
+    const env = new Float32Array(frames);
+    for (let f = 0; f < frames; f++) {
+      const v = Math.min(1, Math.max(0, (db[f] + 48) / 48));
+      env[f] = Math.max(v, f ? env[f - 1] * Math.exp(-ENV_STEP / 0.08) : 0);
+    }
+    // Silence éventuel en tête de fichier : l'explosion part avec le son, pas avant
+    let first = env.findIndex((v) => v > 0.4);
+    if (first < 0) first = 0;
+    let last = frames - 1;
+    while (last > first && env[last] < 0.04) last--;
+    // Crépitements : le niveau bondit d'un coup au-dessus des 100 ms précédentes
+    const onsets = [];
+    for (let f = first + 25; f <= last; f++) {
+      let m = 0;
+      for (let k = f - 10; k < f; k++) m += db[k];
+      if (db[f] - m / 10 > 5 && env[f] > 0.12 && (!onsets.length || (f - first) * ENV_STEP - onsets[onsets.length - 1] > 0.08)) {
+        onsets.push((f - first) * ENV_STEP);
+      }
+    }
+    return { url, buffer, env, lead: first * ENV_STEP, dur: (last - first) * ENV_STEP, onsets };
+  }
+
+  function loadBoomSound() {
+    fetch('/sounds/list', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        const f = (Array.isArray(list) ? list : []).find((x) => /^explosion\.[^.]+$/i.test(String(x.file)));
+        if (!f) return (boomSound = null);
+        if (boomSound && boomSound.url === f.url) return; // déjà analysé (l'URL change avec le fichier)
+        return fetch(f.url)
+          .then((r) => r.arrayBuffer())
+          .then((ab) => new OfflineAudioContext(1, 1, 44100).decodeAudioData(ab))
+          .then((buf) => { boomSound = analyseBoom(f.url, buf); });
+      })
+      .catch(() => { boomSound = null; });
+  }
+
+  // Niveau sonore de l'explosion τ secondes après son départ (0–1)
+  function boomLevel(tau) {
+    if (tau < 0) return 0;
+    if (!boomSound) return tau < 0.6 ? 1 : Math.max(0, 1 - (tau - 0.6) / 2.4);
+    const i = (tau + boomSound.lead) / ENV_STEP;
+    const i0 = Math.floor(i), env = boomSound.env;
+    if (i0 >= env.length - 1) return 0;
+    return env[i0] + (env[i0 + 1] - env[i0]) * (i - i0);
+  }
+  const boomDur = () => (boomSound ? boomSound.dur : 3);
+
+  // Morceau polygonal irrégulier (n sommets) autour de l'origine
+  function chunkShape(n, sz) {
+    return Array.from({ length: n }, (_, k) => {
+      const a = (k / n) * Math.PI * 2 + R(-0.35, 0.35);
+      const r = sz * R(0.55, 1.1);
+      return [Math.cos(a) * r, Math.sin(a) * r];
+    });
   }
 
   function boom(t) {
@@ -268,12 +352,9 @@
     const x = W / 2 + lx * s;
     const y = H / 2 + ly * s;
     const hw = ((box.x1 - box.x0) / 2) * s;
-    boomInfo = { t, x, y, s, hw };
+    boomInfo = { t, x, y, s, hw, onset: 0 };
 
     M.setAttribute('visibility', 'hidden');
-    const bulbs = $('bulbs');
-    bulbs.classList.add('panic');
-    setTimeout(() => bulbs.classList.remove('panic'), 1400);
 
     // Cœur aveuglant
     for (let i = 0; i < 14; i++) {
@@ -287,8 +368,8 @@
       fire.push({ x: x + R(-hw, hw) * 0.6, y: y + R(20, 80) * s, vx: dir * sp, vy: -sp * R(0.02, 0.22),
         size: R(32, 72), grow: 1.8, life: R(0.4, 0.9), age: 0, buoy: 120, drag: 3.2 });
     }
-    // Colonne de feu qui monte
-    for (let i = 0; i < 95; i++) {
+    // Colonne de feu qui monte (entretenue ensuite tant que le son gronde, cf. stepFx)
+    for (let i = 0; i < 70; i++) {
       fire.push({ x: x + R(-hw, hw) * 0.7, y: y + R(-40, 70) * s, vx: R(-150, 150), vy: R(-420, -60),
         size: R(55, 115), grow: 2.2, life: R(0.9, 1.9), age: 0, buoy: 170, drag: 1.7, delay: R(0, 0.4) });
     }
@@ -308,6 +389,32 @@
       shards.push({ x: x + R(-hw, hw), y: y + R(-80, 80) * s, vx: R(-750, 750), vy: R(-1100, -150),
         rot: R(0, 6.28), vr: R(-14, 14), pts, sz, life: R(1.1, 2), age: 0, light: R(0.6, 1.2) });
     }
+    // Escarbilles noircies
+    for (let i = 0; i < 40; i++) {
+      const sz = R(3, 9);
+      shards.push({ x: x + R(-hw, hw), y: y + R(-60, 60) * s, vx: R(-900, 900), vy: R(-1000, -100),
+        rot: R(0, 6.28), vr: R(-18, 18), pts: chunkShape(3 + Math.floor(R(0, 2)), sz), sz, life: R(1.4, 2.6), age: 0,
+        light: 0, dark: true });
+    }
+    // Débris : gros morceaux du M (or) et du bandeau (bleu liseré d'or), qui tournoient
+    // en brûlant puis fument et retombent hors champ
+    for (let i = 0; i < 18; i++) {
+      const banner = i % 3 === 0;
+      const sz = banner ? R(26, 46) : R(22, 56);
+      const r = Math.random();
+      const a = r < 0.75 ? R(-Math.PI + 0.15, -0.15) : r < 0.875 ? R(-0.15, 0.5) : R(Math.PI - 0.5, Math.PI + 0.15);
+      const sp = R(500, 1300);
+      debris.push({ x: x + R(-hw, hw) * 0.7, y: y + R(-60, 60) * s, vx: Math.cos(a) * sp * 1.25, vy: Math.sin(a) * sp,
+        rot: R(0, 6.28), vr: R(-7, 7), tilt: R(0, 6.28), vt: R(-9, 9), pts: chunkShape(4 + Math.floor(R(0, 3)), sz),
+        sz, banner, burn: R(0.5, 1.4), age: 0, life: 3.5 });
+    }
+    // Quelques morceaux projetés droit vers la caméra
+    for (let i = 0; i < 4; i++) {
+      const a = R(0, Math.PI * 2);
+      flyers.push({ x: x + R(-hw, hw) * 0.4, y: y + R(-30, 30) * s, vx: Math.cos(a) * R(250, 600),
+        vy: Math.sin(a) * R(200, 450) - 150, rot: R(0, 6.28), vr: R(-5, 5), tilt: R(0, 6.28), vt: R(-6, 6),
+        pts: chunkShape(5, 22), sz: 22, banner: i === 0, age: 0, life: R(0.6, 0.9), delay: R(0, 0.08) });
+    }
     // Fumée (arrive un peu après)
     for (let i = 0; i < 48; i++) {
       smoke.push({ x: x + R(-hw, hw) * 0.9, y: y + R(-60, 40) * s, vx: R(-100, 100), vy: R(-140, -30),
@@ -320,20 +427,99 @@
     }
     rings.push({ age: 0, life: 0.5 });
 
-    shakeAmp = 22 * s;
+    shakeAmp = 26 * s;
+    // Éclair puis lueur qui suit le volume (cf. stepFx)
     flash.style.background =
       `radial-gradient(circle at ${x}px ${y}px, rgba(255,252,230,1) 0%, rgba(255,210,130,0.6) 12%, rgba(255,150,40,0.15) 35%, transparent 60%)`;
-    flash.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.2,.7,.3,1)' });
 
     playBoom();
+  }
+
+  // Crépitement du son : gerbe d'étincelles et petit sursaut de l'image
+  function pop() {
+    const { x, y, s, hw } = boomInfo;
+    const px = x + R(-hw, hw) * 0.8, py = y + R(-40, 40) * s;
+    for (let i = 0; i < 14; i++) {
+      const a = R(0, Math.PI * 2), sp = R(250, 800);
+      sparks.push({ x: px, y: py, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.75 - 200, life: R(0.25, 0.7), age: 0,
+        w: R(1.2, 3) });
+    }
+    for (let i = 0; i < 4; i++) {
+      embers.push({ x: px, y: py, vx: R(-150, 150), vy: R(-220, -60), life: R(0.8, 1.8), age: 0, delay: 0,
+        r: R(1.2, 2.6), ph: R(0, 6) });
+    }
+    shakeAmp += 6 * s;
+  }
+
+  // Débris : face (or, ou bleu liseré d'or) + tranche plus sombre, aplatie selon la rotation 3D
+  function drawChunk(p, scale, alpha) {
+    const c = Math.cos(p.tilt);
+    const lit = 0.5 + 0.5 * Math.sin(p.tilt * 1.3 + p.rot);
+    const path = (dx, dy) => {
+      ctx.beginPath();
+      p.pts.forEach(([px, py], i) => (i ? ctx.lineTo(px + dx, py + dy) : ctx.moveTo(px + dx, py + dy)));
+      ctx.closePath();
+    };
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.scale(scale, scale * (c < 0 ? -1 : 1) * Math.max(0.12, Math.abs(c)));
+    ctx.globalAlpha = alpha;
+    path(3, 5);
+    ctx.fillStyle = p.banner ? '#040c3a' : '#4a2f02';
+    ctx.fill();
+    path(0, 0);
+    if (p.banner) {
+      ctx.fillStyle = `rgb(${Math.round(16 + 40 * lit)}, ${Math.round(40 + 60 * lit)}, ${Math.round(150 + 80 * lit)})`;
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = `rgb(255, ${Math.round(200 + 45 * lit)}, ${Math.round(40 + 120 * lit)})`;
+      ctx.lineWidth = p.sz * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(...p.pts[0]);
+      ctx.lineTo(...p.pts[1]);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      const lg = ctx.createLinearGradient(-p.sz, -p.sz, p.sz, p.sz);
+      lg.addColorStop(0, `rgb(255, ${Math.round(225 + 30 * lit)}, ${Math.round(110 + 120 * lit)})`);
+      lg.addColorStop(0.5, `rgb(${Math.round(190 + 50 * lit)}, ${Math.round(140 + 50 * lit)}, 20)`);
+      lg.addColorStop(1, 'rgb(105, 70, 5)');
+      ctx.fillStyle = lg;
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   function stepFx(t, dt) {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    if (!boomInfo) return;
+    if (!boomInfo) {
+      flash.style.opacity = 0;
+      return;
+    }
     const s = boomInfo.s;
     const since = t - boomInfo.t;
+    const L = boomLevel(since);
+    flash.style.opacity = Math.min(1, Math.exp(-since / 0.14) + 0.3 * L * L * L).toFixed(3);
+
+    if (dt > 0) {
+      // Boule de feu entretenue tant que le son gronde, puis qui s'éteint avec lui
+      let n = 160 * L * L * L * dt;
+      for (; n > 0; n--) {
+        if (n < 1 && Math.random() > n) break;
+        fire.push({ x: boomInfo.x + R(-boomInfo.hw, boomInfo.hw) * 0.6, y: boomInfo.y + R(-30, 60) * s,
+          vx: R(-140, 140), vy: R(-380, -80) * (0.4 + 0.6 * L), size: R(40, 90) * (0.5 + 0.5 * L), grow: 2,
+          life: R(0.6, 1.3), age: 0, buoy: 170, drag: 1.7 });
+      }
+      // Crépitements du son
+      const onsets = boomSound ? boomSound.onsets : [];
+      while (boomInfo.onset < onsets.length && onsets[boomInfo.onset] <= since) {
+        boomInfo.onset++;
+        pop();
+      }
+    }
 
     // Volutes de fumée résiduelles qui s'échappent de la brèche
     if (since < 6) {
@@ -407,18 +593,43 @@
       ctx.rotate(p.rot);
       ctx.scale(s, s);
       ctx.globalAlpha = Math.min(1, (1 - a) * 2.5);
-      // L'éclat « tourne » : sa luminosité oscille avec la rotation
-      const flick = 0.55 + 0.45 * Math.sin(p.rot * 2 + p.light * 3);
-      const lg = ctx.createLinearGradient(-p.sz, -p.sz, p.sz, p.sz);
-      lg.addColorStop(0, `rgb(255, ${Math.round(235 + 20 * flick)}, ${Math.round(120 + 100 * flick)})`);
-      lg.addColorStop(0.5, `rgb(${Math.round(200 + 40 * flick)}, ${Math.round(150 + 40 * flick)}, 20)`);
-      lg.addColorStop(1, 'rgb(110, 75, 5)');
-      ctx.fillStyle = lg;
+      if (p.dark) {
+        ctx.fillStyle = 'rgb(38, 24, 12)';
+      } else {
+        // L'éclat « tourne » : sa luminosité oscille avec la rotation
+        const flick = 0.55 + 0.45 * Math.sin(p.rot * 2 + p.light * 3);
+        const lg = ctx.createLinearGradient(-p.sz, -p.sz, p.sz, p.sz);
+        lg.addColorStop(0, `rgb(255, ${Math.round(235 + 20 * flick)}, ${Math.round(120 + 100 * flick)})`);
+        lg.addColorStop(0.5, `rgb(${Math.round(200 + 40 * flick)}, ${Math.round(150 + 40 * flick)}, 20)`);
+        lg.addColorStop(1, 'rgb(110, 75, 5)');
+        ctx.fillStyle = lg;
+      }
       ctx.beginPath();
       p.pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
       ctx.closePath();
       ctx.fill();
       ctx.restore();
+    }
+
+    // --- Débris (traînée de feu, puis de fumée) ---
+    debris = debris.filter((p) => live(p) && p.y < H + 200 * s && p.x > -200 * s && p.x < W + 200 * s);
+    for (const p of debris) {
+      if (dt > 0) {
+        p.vy += 1400 * dt;
+        p.vx *= Math.exp(-0.5 * dt);
+        p.x += p.vx * dt * s;
+        p.y += p.vy * dt * s;
+        p.rot += p.vr * dt;
+        p.tilt += p.vt * dt;
+        if (p.age < p.burn) {
+          fire.push({ x: p.x, y: p.y, vx: R(-30, 30), vy: R(-60, 0), size: R(18, 34) * (1 - p.age / p.burn * 0.6),
+            grow: 1.2, life: R(0.25, 0.45), age: 0, buoy: 60, drag: 2 });
+        } else if (Math.random() < 30 * dt) {
+          smoke.push({ x: p.x, y: p.y, vx: R(-15, 15), vy: R(-40, -10), size: R(14, 26), grow: 2.5, life: R(0.8, 1.4),
+            age: 0, a: R(0.25, 0.4) });
+        }
+      }
+      drawChunk(p, s, 1);
     }
 
     // --- Étincelles et braises (additif) ---
@@ -457,6 +668,20 @@
       ctx.fill();
     }
 
+    // --- Morceaux qui foncent vers la caméra (par-dessus tout) ---
+    ctx.globalCompositeOperation = 'source-over';
+    flyers = flyers.filter(live);
+    for (const p of flyers) {
+      if (p.delay > 0) continue;
+      const a = p.age / p.life;
+      const z = 1 + 9 * a * a; // grossit en approchant
+      p.x += p.vx * dt * s * Math.sqrt(z);
+      p.y += p.vy * dt * s * Math.sqrt(z);
+      p.rot += p.vr * dt;
+      p.tilt += p.vt * dt;
+      drawChunk(p, s * z, a < 0.7 ? 1 : (1 - a) / 0.3);
+    }
+
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -483,10 +708,81 @@
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);
 
+  /* ---------- Musique de l'intro en boucle (aperçu seul : sur l'écran de jeu, ---------- *
+   * c'est le serveur qui la diffuse). Début « intro-boucle-debut » joué une fois s'il existe. */
+  const MUSIC_VOL = 0.2;
+  let music = null; // promesse { buffer, loopStart } (null : pas de fichier)
+  let musicStop = null;
+  let musicToken = 0;
+
+  function loadMusic() {
+    const dec = new OfflineAudioContext(2, 1, 44100);
+    const load = (f) => f && fetch(f.url).then((r) => r.arrayBuffer()).then((ab) => dec.decodeAudioData(ab));
+    return fetch('/sounds/list', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        const find = (re) => (Array.isArray(list) ? list : []).find((x) => re.test(String(x.file)));
+        const loop = find(/^intro-boucle\.[^.]+$/i);
+        if (!loop) return null;
+        return Promise.all([load(find(/^intro-boucle-debut\.[^.]+$/i)), load(loop)]);
+      })
+      .then((bufs) => {
+        if (!bufs) return null;
+        const [a, b] = bufs;
+        if (!a) return { buffer: b, loopStart: 0 };
+        const ch = Math.max(a.numberOfChannels, b.numberOfChannels);
+        const buffer = new AudioBuffer({ length: a.length + b.length, numberOfChannels: ch, sampleRate: a.sampleRate });
+        for (let i = 0; i < ch; i++) {
+          buffer.copyToChannel(a.getChannelData(Math.min(i, a.numberOfChannels - 1)), i, 0);
+          buffer.copyToChannel(b.getChannelData(Math.min(i, b.numberOfChannels - 1)), i, a.length);
+        }
+        return { buffer, loopStart: a.length / a.sampleRate };
+      })
+      .catch(() => null);
+  }
+
+  function stopMusic() {
+    musicToken++;
+    if (musicStop) musicStop();
+    musicStop = null;
+  }
+
+  // Repart du début (si l'audio est encore bloqué, elle démarre au premier geste)
+  function playMusic() {
+    stopMusic();
+    const ac = EMBED ? null : audio();
+    if (!ac) return;
+    const token = musicToken;
+    (music = music || loadMusic()).then((m) => {
+      if (!m || token !== musicToken) return;
+      const gain = ac.createGain();
+      gain.gain.value = MUSIC_VOL;
+      gain.connect(ac.destination);
+      const src = ac.createBufferSource();
+      src.buffer = m.buffer;
+      src.loop = true;
+      src.loopStart = m.loopStart;
+      src.loopEnd = m.buffer.duration;
+      src.connect(gain);
+      src.start();
+      musicStop = () => {
+        try { src.stop(); } catch { /* déjà arrêtée */ }
+        gain.disconnect();
+      };
+    });
+  }
+
   function playBoom() {
     const ac = audio();
     if (!ac) return;
     if (ac.state !== 'running') ac.resume();
+    if (boomSound) { // le fichier de sounds/, sans son silence de tête : il part avec l'image
+      const src = ac.createBufferSource();
+      src.buffer = boomSound.buffer;
+      src.connect(ac.destination);
+      src.start(0, boomSound.lead);
+      return;
+    }
     const now = ac.currentTime + 0.01;
 
     const out = ac.createDynamicsCompressor();
@@ -539,6 +835,7 @@
   let t0 = performance.now();
   let last = t0;
   let boomed = false;
+  let boomClock = null;
   let mGlintDone = false;
   let nextGlint = 0.6;
 
@@ -581,12 +878,24 @@
     updateGlints(t);
 
     if (!boomed && t >= boomAt) {
-      boomed = true;
-      boom(t);
+      // Écran de jeu : le son est joué par la page parente ; on attend qu'il démarre
+      // vraiment (position > silence de tête) pour que l'image parte pile avec lui.
+      const lead = boomSound ? boomSound.lead : 0;
+      const pos = boomClock ? boomClock() : null;
+      const ok = typeof pos === 'number' && pos < lead + 1;
+      if (!(ok && pos < lead && t - boomAt < 0.6)) {
+        boomed = true;
+        boom(ok && pos >= lead ? t - (pos - lead) : t);
+      }
     }
     stepFx(t, dt);
+    bulbs.classList.toggle('panic', !!boomInfo && boomLevel(t - boomInfo.t) > 0.55);
 
-    // Tremblement de l'image
+    // Tremblement de l'image : suit le volume du son
+    if (boomInfo) {
+      const L = boomLevel(t - boomInfo.t);
+      shakeAmp = Math.max(shakeAmp, 20 * boomInfo.s * L * L);
+    }
     if (shakeAmp > 0.3) {
       shakeAmp *= Math.exp(-5 * dt);
       stage.style.transform = `translate(${R(-1, 1) * shakeAmp}px, ${R(-1, 1) * shakeAmp}px)`;
@@ -615,8 +924,11 @@
     boomed = false;
     mGlintDone = false;
     nextGlint = 0.6;
+    boomClock = null;
     boomInfo = null;
-    fire = []; smoke = []; sparks = []; shards = []; embers = []; rings = [];
+    fire = []; smoke = []; sparks = []; shards = []; embers = []; rings = []; debris = []; flyers = [];
+    loadBoomSound(); // le fichier a pu changer depuis la dernière fois
+    playMusic();
     glints.forEach((g) => g.el.remove());
     glints = [];
     shakeAmp = 0;
@@ -627,17 +939,21 @@
     logoWrap.classList.add('appear');
   }
 
-  function boomNow() {
+  // clock (écran de jeu) : position de lecture du son d'explosion, en secondes
+  // (0 = pas encore parti, null = pas de son joué ici).
+  function boomNow(clock) {
     if (boomed) return;
     boomAt = lastT; // à la prochaine image
+    boomClock = typeof clock === 'function' ? clock : null;
     mGlintDone = true;
   }
 
   // Arrêt (écran de jeu) : on fige et on vide les effets.
   function stop() {
     paused = true;
-    fire = []; smoke = []; sparks = []; shards = []; embers = []; rings = [];
+    fire = []; smoke = []; sparks = []; shards = []; embers = []; rings = []; debris = []; flyers = [];
     boomInfo = null;
+    bulbs.classList.remove('panic');
     stepFx(0, 0);
   }
 
@@ -648,6 +964,7 @@
       if (e.code === 'KeyB') boomNow();
     });
   }
+  loadBoomSound();
 
   let cursorTimer;
   window.addEventListener('mousemove', () => {
@@ -662,6 +979,7 @@
     const start = t0;
     for (let ms = 0; ms <= T * 1000; ms += 1000 / 60) tick(start + ms);
     paused = true;
+    stopMusic(); // image figée : pas de musique
   }
 
   // « OR » chevauche les anneaux : on bouche en bleu le trou du O et l'espace entre O et R.
@@ -690,7 +1008,10 @@
 
   ready = true;
   if (EMBED) document.body.classList.add('embed');
-  else logoWrap.classList.add('appear');
+  else {
+    logoWrap.classList.add('appear');
+    playMusic();
+  }
   requestAnimationFrame(frame);
 
   // ?at=T : image figée à l'instant T (pour les captures)

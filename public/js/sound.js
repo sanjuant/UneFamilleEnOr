@@ -225,6 +225,13 @@ const SoundManager = (() => {
     }
   }
 
+  /** Position de lecture (s) d'un son de fichier lancé ici : 0 tant qu'il n'est pas parti, null s'il ne joue pas. */
+  function position(name) {
+    const el = playing[name];
+    if (!el || el.ended) return null;
+    return el.paused ? 0 : el.currentTime;
+  }
+
   function stop(name) {
     tokens[name] = (tokens[name] || 0) + 1;
     delete gains[name];
@@ -636,5 +643,5 @@ const SoundManager = (() => {
 
   scan();
 
-  return { catalog: CATALOG, play, stop, stopAll, handle, unlock, setMuted, isMuted, isUnlocked, scan, fileFor, headFor, onChange, setVolume };
+  return { catalog: CATALOG, play, stop, stopAll, position, handle, unlock, setMuted, isMuted, isUnlocked, scan, fileFor, headFor, onChange, setVolume };
 })();
